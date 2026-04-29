@@ -8,14 +8,36 @@ import { UpcomingView } from "./views/UpcomingView";
 import { ListView } from "./views/ListView";
 import { initialGroups, initialProjects, initialTasks } from "./data/seed";
 import { computeCounts } from "./data/helpers";
+import { useLocalStorage } from "./hooks/useLocalStorage";
+
+const STORAGE_KEYS = {
+  tasks: "todo:v1:tasks",
+  projects: "todo:v1:projects",
+} as const;
+
+function computeInitialNextId(tasks: Task[], projects: Project[]): number {
+  let max = 99;
+  for (const t of tasks) if (t.id > max) max = t.id;
+  for (const p of projects) {
+    const m = /^proj-(\d+)$/.exec(p.id);
+    if (m) {
+      const n = Number(m[1]);
+      if (n > max) max = n;
+    }
+  }
+  return max + 1;
+}
 
 function App() {
   const [view, setView] = useState<View>({ type: "today" });
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [tasks, setTasks] = useLocalStorage<Task[]>(STORAGE_KEYS.tasks, initialTasks);
+  const [projects, setProjects] = useLocalStorage<Project[]>(
+    STORAGE_KEYS.projects,
+    initialProjects,
+  );
   const [groups] = useState<Group[]>(initialGroups);
   const [quickAdd, setQuickAdd] = useState(false);
-  const nextId = useRef(100);
+  const nextId = useRef(computeInitialNextId(tasks, projects));
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
