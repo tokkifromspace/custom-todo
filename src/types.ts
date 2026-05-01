@@ -4,6 +4,7 @@ export type When =
   | "today"
   | "evening"
   | "tomorrow"
+  | "scheduled"
   | "anytime"
   | "someday"
   | "inbox";
@@ -27,8 +28,10 @@ export interface Task {
   notes?: string;
   bucket?: Bucket | null;
   when: When;
-  // ISO YYYY-MM-DD
+  // ISO YYYY-MM-DD - when the user wants to do the task
   due?: string;
+  // ISO YYYY-MM-DD - hard deadline by which the task is due
+  deadline?: string;
   repeat?: string;
   projectId?: string;
   tags?: string[];
@@ -64,8 +67,10 @@ export interface NewTaskPayload {
   notes?: string;
   when: When;
   bucket?: Bucket | null;
-  // ISO YYYY-MM-DD
+  // ISO YYYY-MM-DD - scheduled date
   due?: string;
+  // ISO YYYY-MM-DD - hard deadline
+  deadline?: string;
   // serialized repeat: "daily" | "weekly" | "biweekly" | "monthly" | "<interval>:completion"
   repeat?: string;
   projectId?: string;

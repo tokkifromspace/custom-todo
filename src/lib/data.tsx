@@ -23,6 +23,7 @@ interface TaskRow {
   bucket: string | null;
   when_at: string;
   due: string | null;
+  deadline: string | null;
   repeat: string | null;
   project_id: string | null;
   tags: string[];
@@ -50,6 +51,7 @@ function toTask(row: TaskRow): Task {
     bucket: (row.bucket as Bucket | null) ?? undefined,
     when: row.when_at as When,
     due: row.due ?? undefined,
+    deadline: row.deadline ?? undefined,
     repeat: row.repeat ?? undefined,
     projectId: row.project_id ?? undefined,
     tags: row.tags.length > 0 ? row.tags : undefined,
@@ -177,7 +179,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         supabase.from("projects").select("id, group_id, name, color").order("sort_order").order("created_at"),
         supabase
           .from("tasks")
-          .select("id, title, notes, bucket, when_at, due, repeat, project_id, tags, done")
+          .select("id, title, notes, bucket, when_at, due, deadline, repeat, project_id, tags, done")
           .order("sort_order")
           .order("created_at"),
       ]);
@@ -196,7 +198,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           supabase.from("projects").select("id, group_id, name, color").order("sort_order").order("created_at"),
           supabase
             .from("tasks")
-            .select("id, title, notes, bucket, when_at, due, repeat, project_id, tags, done")
+            .select("id, title, notes, bucket, when_at, due, deadline, repeat, project_id, tags, done")
             .order("sort_order")
             .order("created_at"),
         ]);
@@ -310,6 +312,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if ("bucket" in patch) dbPatch.bucket = patch.bucket ?? null;
     if ("when" in patch) dbPatch.when_at = patch.when;
     if ("due" in patch) dbPatch.due = patch.due ?? null;
+    if ("deadline" in patch) dbPatch.deadline = patch.deadline ?? null;
     if ("repeat" in patch) dbPatch.repeat = patch.repeat ?? null;
     if ("projectId" in patch) dbPatch.project_id = patch.projectId ?? null;
     if ("tags" in patch) dbPatch.tags = patch.tags ?? [];
@@ -367,11 +370,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         bucket: payload.bucket ?? null,
         when_at: payload.when,
         due: payload.due ?? null,
+        deadline: payload.deadline ?? null,
         repeat: payload.repeat ?? null,
         project_id: payload.projectId ?? null,
         tags: payload.tags ?? [],
       })
-      .select("id, title, notes, bucket, when_at, due, repeat, project_id, tags, done")
+      .select("id, title, notes, bucket, when_at, due, deadline, repeat, project_id, tags, done")
       .single();
     if (error || !data) {
       setTasks((ts) => ts.filter((t) => t.id !== tempId));

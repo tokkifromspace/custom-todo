@@ -52,6 +52,39 @@
   }
 }
 
+/* slot above the header (e.g. quick options) */
+.cal-slot {
+  display: flex;
+  gap: 6px;
+  padding: 2px 2px 8px;
+  border-bottom: 1px solid var(--border-strong);
+  margin-bottom: 8px;
+}
+.cal-quick-btn {
+  flex: 1;
+  appearance: none;
+  border: none;
+  background: var(--bg-hover);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg-2);
+  height: 30px;
+  border-radius: var(--r-sm);
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: background 0.12s, color 0.12s;
+}
+.cal-quick-btn:hover { background: var(--bg-active); color: var(--fg); }
+.cal-quick-btn[data-active="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
 /* header */
 .cal-head {
   display: flex; align-items: center; gap: 4px;
