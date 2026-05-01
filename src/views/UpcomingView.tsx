@@ -10,6 +10,7 @@ interface Props {
   onDelete: (task: Task) => void;
   onEdit: (task: Task) => void;
   onSetDue: (id: string, due: string | null) => void;
+  recentlyCompleted: Set<string>;
   projectsById: Record<string, Project>;
   onQuickAdd: () => void;
 }
@@ -22,7 +23,7 @@ interface DayCell {
   tasks: Task[];
 }
 
-export function UpcomingView({ tasks, onToggle, onDelete, onEdit, onSetDue, projectsById, onQuickAdd }: Props) {
+export function UpcomingView({ tasks, onToggle, onDelete, onEdit, onSetDue, recentlyCompleted, projectsById, onQuickAdd }: Props) {
   const today = new Date();
   const todayKey = todayIso();
 
@@ -65,7 +66,9 @@ export function UpcomingView({ tasks, onToggle, onDelete, onEdit, onSetDue, proj
   const isCurrentMonth =
     anchor.getFullYear() === today.getFullYear() && anchor.getMonth() === today.getMonth();
 
-  const todayTasks = tasks.filter((t) => t.bucket === "today" && !t.done);
+  const todayTasks = tasks.filter(
+    (t) => t.bucket === "today" && (!t.done || recentlyCompleted.has(t.id)),
+  );
 
   return (
     <div

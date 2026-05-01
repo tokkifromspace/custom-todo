@@ -21,6 +21,7 @@ function App() {
     loading,
     error,
     pendingDelete,
+    recentlyCompleted,
     toggleTask,
     addTask,
     updateTask,
@@ -117,6 +118,7 @@ function App() {
         onEdit={setEditingTask}
         onSetDue={handleSetDue}
         onReorder={reorderTasks}
+        recentlyCompleted={recentlyCompleted}
         projectsById={projectsById}
         onQuickAdd={() => setQuickAdd(true)}
       />
@@ -136,6 +138,7 @@ function App() {
           onSetDue={handleSetDue}
           onReorder={reorderTasks}
           onRenameProject={(id, name) => void updateProject(id, { name })}
+          recentlyCompleted={recentlyCompleted}
           projectsById={projectsById}
           onQuickAdd={() => setQuickAdd(true)}
         />
@@ -149,12 +152,13 @@ function App() {
         onDelete={deleteTask}
         onEdit={setEditingTask}
         onSetDue={handleSetDue}
+        recentlyCompleted={recentlyCompleted}
         projectsById={projectsById}
         onQuickAdd={() => setQuickAdd(true)}
       />
     );
   } else if (view.type === "inbox") {
-    const list = tasks.filter((t) => t.when === "inbox" && !t.done);
+    const list = tasks.filter((t) => t.when === "inbox" && (!t.done || recentlyCompleted.has(t.id)));
     pane = (
       <ListView
         title="Inbox"
@@ -172,7 +176,7 @@ function App() {
       />
     );
   } else if (view.type === "anytime") {
-    const list = tasks.filter((t) => t.when === "anytime" && !t.done);
+    const list = tasks.filter((t) => t.when === "anytime" && (!t.done || recentlyCompleted.has(t.id)));
     pane = (
       <ListView
         title="Anytime"
@@ -190,7 +194,7 @@ function App() {
       />
     );
   } else if (view.type === "someday") {
-    const list = tasks.filter((t) => t.when === "someday" && !t.done);
+    const list = tasks.filter((t) => t.when === "someday" && (!t.done || recentlyCompleted.has(t.id)));
     pane = (
       <ListView
         title="Someday"

@@ -10,13 +10,15 @@ interface Props {
   onEdit: (task: Task) => void;
   onSetDue: (id: string, due: string | null) => void;
   onReorder: (orderedIds: string[]) => void;
+  recentlyCompleted: Set<string>;
   projectsById: Record<string, Project>;
   onQuickAdd: () => void;
 }
 
-export function TodayView({ tasks, onToggle, onDelete, onEdit, onSetDue, onReorder, projectsById, onQuickAdd }: Props) {
-  const today = tasks.filter((t) => t.bucket === "today" && !t.done);
-  const evening = tasks.filter((t) => t.bucket === "evening" && !t.done);
+export function TodayView({ tasks, onToggle, onDelete, onEdit, onSetDue, onReorder, recentlyCompleted, projectsById, onQuickAdd }: Props) {
+  const visible = (t: Task) => !t.done || recentlyCompleted.has(t.id);
+  const today = tasks.filter((t) => t.bucket === "today" && visible(t));
+  const evening = tasks.filter((t) => t.bucket === "evening" && visible(t));
   const remaining = today.length;
   const eveningCount = evening.length;
 

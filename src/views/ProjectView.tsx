@@ -15,11 +15,12 @@ interface Props {
   onSetDue: (id: string, due: string | null) => void;
   onReorder: (orderedIds: string[]) => void;
   onRenameProject: (id: string, name: string) => void;
+  recentlyCompleted: Set<string>;
   projectsById: Record<string, Project>;
   onQuickAdd: () => void;
 }
 
-export function ProjectView({ project, group, tasks, onToggle, onDelete, onEdit, onSetDue, onReorder, onRenameProject, projectsById, onQuickAdd }: Props) {
+export function ProjectView({ project, group, tasks, onToggle, onDelete, onEdit, onSetDue, onReorder, onRenameProject, recentlyCompleted, projectsById, onQuickAdd }: Props) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(project.name);
 
@@ -50,8 +51,9 @@ export function ProjectView({ project, group, tasks, onToggle, onDelete, onEdit,
 
 
   const projTasks = tasks.filter((t) => t.projectId === project.id);
-  const inFlight = projTasks.filter((t) => !t.done && t.when !== "someday");
-  const someday = projTasks.filter((t) => !t.done && t.when === "someday");
+  const visible = (t: Task) => !t.done || recentlyCompleted.has(t.id);
+  const inFlight = projTasks.filter((t) => visible(t) && t.when !== "someday");
+  const someday = projTasks.filter((t) => visible(t) && t.when === "someday");
   const totalDone = projTasks.filter((t) => t.done).length;
   const total = projTasks.length;
 

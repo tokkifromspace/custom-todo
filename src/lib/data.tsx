@@ -77,6 +77,7 @@ interface DataContextValue {
   loading: boolean;
   error: string | null;
   pendingDelete: Task | null;
+  recentlyCompleted: Set<string>;
   toggleTask: (id: string) => Promise<void>;
   addTask: (payload: NewTaskPayload) => Promise<void>;
   updateTask: (id: string, patch: Partial<Task>) => Promise<void>;
@@ -101,6 +102,43 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Task | null>(null);
+  const [recentlyCompleted, setRecentlyCompleted] = useState<Set<string>>(() => new Set());
+  const recentTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const RECENT_COMPLETE_MS = 5000;
+  const markRecentlyCompleted = useCallback((id: string) => {
+    setRecentlyCompleted((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    const existing = recentTimers.current.get(id);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      setRecentlyCompleted((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      recentTimers.current.delete(id);
+    }, RECENT_COMPLETE_MS);
+    recentTimers.current.set(id, timer);
+  }, []);
+
+  const clearRecentlyCompleted = useCallback((id: string) => {
+    const t = recentTimers.current.get(id);
+    if (t) {
+      clearTimeout(t);
+      recentTimers.current.delete(id);
+    }
+    setRecentlyCompleted((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
 
   const tasksRef = useRef<Task[]>([]);
   const projectsRef = useRef<Project[]>([]);
@@ -233,18 +271,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
 
     const prevDone = current.done;
+    const willBeDone = !prevDone;
     setTasks((ts) =>
       ts.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
     );
+    if (willBeDone) markRecentlyCompleted(id);
+    else clearRecentlyCompleted(id);
+
     const { error } = await supabase
       .from("tasks")
       .update({ done: !prevDone })
       .eq("id", id);
     if (error) {
       setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, done: prevDone } : t)));
+      // Revert recent-completed bookkeeping too
+      if (willBeDone) clearRecentlyCompleted(id);
       setError(error.message);
     }
-  }, []);
+  }, [markRecentlyCompleted, clearRecentlyCompleted]);
 
   const updateTask = useCallback(async (id: string, patch: Partial<Task>) => {
     if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -497,6 +541,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     pendingDelete,
+    recentlyCompleted,
     toggleTask,
     addTask,
     updateTask,
