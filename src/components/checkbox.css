@@ -1,0 +1,161 @@
+/* checkbox.css — uses tokens from your global stylesheet
+   (--accent, --done, --weekend, --fg, --fg-3, --fg-4, --bg-hover, etc.) */
+
+.cb {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: default;
+  font-family: inherit;
+  -webkit-user-select: none;
+  user-select: none;
+  position: relative;
+}
+.cb[data-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+
+/* hide native input but keep accessible */
+.cb input {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: 0; padding: 0;
+  border: 0; clip: rect(0 0 0 0);
+  overflow: hidden;
+}
+
+/* control: square (form) or round (task) */
+.cb-box {
+  --cb-size: 18px;
+  width: var(--cb-size);
+  height: var(--cb-size);
+  border-radius: 5px;
+  border: 1.4px solid var(--fg-4);
+  background: transparent;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background 0.14s, border-color 0.14s, box-shadow 0.14s, transform 0.1s;
+}
+.cb[data-size="sm"] .cb-box { --cb-size: 16px; border-radius: 4px; }
+.cb[data-size="md"] .cb-box { --cb-size: 18px; border-radius: 5px; }
+.cb[data-size="lg"] .cb-box { --cb-size: 22px; border-radius: 6px; }
+
+.cb[data-variant="subtask"] .cb-box {
+  border-radius: 999px;
+  margin-top: 1px;
+}
+
+/* hover */
+.cb:not([data-disabled="true"]):hover .cb-box {
+  border-color: var(--fg-3);
+  background: oklch(0.4 0.01 80 / 0.04);
+}
+.cb[data-variant="task"]:not([data-disabled="true"]):hover .cb-box,
+.cb[data-variant="subtask"]:not([data-disabled="true"]):hover .cb-box {
+  border-color: var(--done);
+}
+
+/* keyboard focus ring */
+.cb input:focus-visible + .cb-box {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--accent);
+}
+.cb[data-variant="task"] input:focus-visible + .cb-box,
+.cb[data-variant="subtask"] input:focus-visible + .cb-box {
+  box-shadow: 0 0 0 3px oklch(0.65 0.13 145 / 0.20);
+  border-color: var(--done);
+}
+
+/* checked */
+.cb[data-checked="true"] .cb-box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.cb[data-variant="task"][data-checked="true"] .cb-box,
+.cb[data-variant="subtask"][data-checked="true"] .cb-box {
+  background: var(--done);
+  border-color: var(--done);
+}
+.cb[data-checked="true"]:not([data-disabled="true"]):hover .cb-box {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+.cb[data-variant="task"][data-checked="true"]:not([data-disabled="true"]):hover .cb-box,
+.cb[data-variant="subtask"][data-checked="true"]:not([data-disabled="true"]):hover .cb-box {
+  background: oklch(0.58 0.13 145);
+  border-color: oklch(0.58 0.13 145);
+}
+
+/* error */
+.cb[data-error="true"] .cb-box { border-color: var(--weekend); }
+.cb[data-error="true"]:not([data-disabled="true"]):hover .cb-box {
+  border-color: oklch(0.55 0.18 25);
+  background: oklch(0.62 0.18 25 / 0.06);
+}
+.cb[data-error="true"][data-checked="true"] .cb-box {
+  background: var(--weekend);
+  border-color: var(--weekend);
+}
+.cb[data-error="true"] input:focus-visible + .cb-box {
+  box-shadow: 0 0 0 3px oklch(0.62 0.18 25 / 0.18);
+}
+
+/* check / dash icon */
+.cb-icon {
+  width: 65%;
+  height: 65%;
+  color: white;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.12s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cb[data-checked="true"] .cb-icon,
+.cb[data-indeterminate="true"] .cb-icon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* press feedback */
+.cb:not([data-disabled="true"]):active .cb-box { transform: scale(0.94); }
+
+/* label + description */
+.cb-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-top: 0.5px;
+}
+.cb-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: -0.005em;
+  line-height: 1.4;
+}
+.cb[data-size="sm"] .cb-label { font-size: 12.5px; }
+.cb[data-size="lg"] .cb-label { font-size: 15px; }
+
+.cb-required { color: var(--weekend); margin-left: 2px; }
+
+.cb-desc {
+  font-size: 12px;
+  color: var(--fg-3);
+  line-height: 1.45;
+}
+.cb[data-size="sm"] .cb-desc { font-size: 11.5px; }
+.cb[data-size="lg"] .cb-desc { font-size: 13px; }
+.cb[data-error="true"] .cb-desc { color: var(--weekend); }
+
+/* task / subtask variants: strikethrough on checked label */
+.cb[data-variant="task"][data-checked="true"] .cb-label,
+.cb[data-variant="subtask"][data-checked="true"] .cb-label {
+  color: var(--fg-4);
+  text-decoration: line-through;
+  text-decoration-color: var(--fg-4);
+}

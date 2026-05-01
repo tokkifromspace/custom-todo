@@ -27,9 +27,11 @@ export function TaskRow({ task, onToggle, onDelete, onEdit, onSetDue, showProjec
   return (
     <div className={`task-row ${task.done ? "done" : ""}`}>
       <Checkbox
+        variant="task"
+        size="sm"
         checked={task.done}
-        bucket={task.bucket}
-        onClick={() => onToggle?.(task.id)}
+        onChange={() => onToggle?.(task.id)}
+        ariaLabel={`Mark "${task.title || "Untitled"}" as ${task.done ? "incomplete" : "complete"}`}
       />
       <div
         className={`task-body ${onEdit ? "editable" : ""}`}
