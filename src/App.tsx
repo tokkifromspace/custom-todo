@@ -26,7 +26,19 @@ function App() {
     undoDeleteTask,
     deleteProject,
   } = useData();
-  const { signOut } = useAuth();
+  const { signOut, updatePassword } = useAuth();
+
+  const handleChangePassword = async () => {
+    const newPw = window.prompt("Enter new password (min 6 chars):");
+    if (!newPw) return;
+    if (newPw.length < 6) {
+      window.alert("Password must be at least 6 characters.");
+      return;
+    }
+    const { error: pwError } = await updatePassword(newPw);
+    if (pwError) window.alert(`Failed: ${pwError}`);
+    else window.alert("Password updated.");
+  };
   const [view, setView] = useState<View>({ type: "today" });
   const [quickAdd, setQuickAdd] = useState(false);
 
@@ -185,6 +197,7 @@ function App() {
         counts={counts}
         onAddProject={handleAddProject}
         onDeleteProject={deleteProject}
+        onChangePassword={() => void handleChangePassword()}
         onSignOut={() => void signOut()}
       />
       {pane}

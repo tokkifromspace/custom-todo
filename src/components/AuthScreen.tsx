@@ -2,35 +2,59 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useAuth } from "../lib/auth";
 
+type Mode = "signin" | "signup" | "magic";
+
 export function AuthScreen() {
-  const { signInWithMagicLink } = useAuth();
+  const { signInWithPassword, signUpWithPassword, signInWithMagicLink } = useAuth();
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [magicSent, setMagicSent] = useState(false);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    setStatus("sending");
+    setBusy(true);
     setErrorMsg(null);
-    const { error } = await signInWithMagicLink(email.trim());
-    if (error) {
-      setStatus("error");
-      setErrorMsg(error);
+    if (mode === "magic") {
+      const { error } = await signInWithMagicLink(email.trim());
+      if (error) setErrorMsg(error);
+      else setMagicSent(true);
+    } else if (mode === "signup") {
+      const { error } = await signUpWithPassword(email.trim(), password);
+      if (error) setErrorMsg(error);
     } else {
-      setStatus("sent");
+      const { error } = await signInWithPassword(email.trim(), password);
+      if (error) setErrorMsg(error);
     }
+    setBusy(false);
   };
+
+  const headerTitle =
+    mode === "signup" ? "Create your account"
+    : mode === "magic" ? "Sign in via magic link"
+    : "Welcome back";
+  const headerSub =
+    mode === "signup" ? "Pick an email and password to start."
+    : mode === "magic" ? "We'll email you a one-time link."
+    : "Sign in with email and password.";
+  const submitLabel =
+    busy ? (mode === "magic" ? "Sending…" : "Signing in…")
+    : mode === "signup" ? "Sign up"
+    : mode === "magic" ? "Send magic link"
+    : "Sign in";
 
   return (
     <div className="auth-shell mesh-cool" data-theme="light">
       <div className="auth-card glass-strong">
         <div className="auth-header">
           <div className="auth-mark" />
-          <div className="auth-title">Welcome back</div>
-          <div className="auth-sub">Sign in with a magic link — no password needed.</div>
+          <div className="auth-title">{headerTitle}</div>
+          <div className="auth-sub">{headerSub}</div>
         </div>
-        {status === "sent" ? (
+        {mode === "magic" && magicSent ? (
           <div className="auth-success">
             <div className="auth-success-title">Check your inbox</div>
             <div className="auth-success-sub">
@@ -40,11 +64,12 @@ export function AuthScreen() {
               type="button"
               className="btn"
               onClick={() => {
-                setStatus("idle");
+                setMagicSent(false);
+                setMode("signin");
                 setEmail("");
               }}
             >
-              Use a different email
+              Back to sign in
             </button>
           </div>
         ) : (
@@ -61,12 +86,53 @@ export function AuthScreen() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="auth-input"
-              disabled={status === "sending"}
+              disabled={busy}
             />
+            {mode !== "magic" && (
+              <>
+                <label className="auth-label" htmlFor="auth-password" style={{ marginTop: 4 }}>
+                  Password
+                </label>
+                <input
+                  id="auth-password"
+                  type="password"
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="auth-input"
+                  disabled={busy}
+                />
+              </>
+            )}
             {errorMsg && <div className="auth-error">{errorMsg}</div>}
-            <button type="submit" className="btn primary auth-submit" disabled={status === "sending"}>
-              {status === "sending" ? "Sending…" : "Send magic link"}
+            <button type="submit" className="btn primary auth-submit" disabled={busy}>
+              {submitLabel}
             </button>
+            <div className="auth-switch">
+              {mode === "signin" && (
+                <>
+                  <button type="button" className="auth-link" onClick={() => { setMode("signup"); setErrorMsg(null); }}>
+                    Create account
+                  </button>
+                  <span className="auth-switch-sep">·</span>
+                  <button type="button" className="auth-link" onClick={() => { setMode("magic"); setErrorMsg(null); }}>
+                    Use magic link
+                  </button>
+                </>
+              )}
+              {mode === "signup" && (
+                <button type="button" className="auth-link" onClick={() => { setMode("signin"); setErrorMsg(null); }}>
+                  Already have an account? Sign in
+                </button>
+              )}
+              {mode === "magic" && (
+                <button type="button" className="auth-link" onClick={() => { setMode("signin"); setErrorMsg(null); }}>
+                  Back to password sign in
+                </button>
+              )}
+            </div>
           </form>
         )}
       </div>

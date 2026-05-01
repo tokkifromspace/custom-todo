@@ -578,6 +578,27 @@ body { background: var(--bg-wall); color: var(--fg); }
 }
 .auth-success-sub { font-size: 13px; color: var(--fg-2); line-height: 1.5; }
 .auth-success .btn { align-self: flex-start; cursor: pointer; }
+.auth-switch {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+.auth-switch-sep { color: var(--fg-4); }
+.auth-link {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.auth-link:hover { text-decoration: underline; }
 
 .app-error {
   position: fixed;
