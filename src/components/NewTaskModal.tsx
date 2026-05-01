@@ -418,6 +418,8 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
                 borderRadius: 8,
                 background: "var(--bg-hover)",
                 cursor: "default",
+                minHeight: 30,
+                boxSizing: "border-box",
               }}
             >
               {project ? (
@@ -510,6 +512,7 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
               borderRadius: 8,
               background: "var(--bg-hover)",
               minHeight: 30,
+              boxSizing: "border-box",
             }}
           >
             <Icon
