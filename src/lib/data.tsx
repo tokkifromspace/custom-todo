@@ -28,6 +28,7 @@ interface TaskRow {
   project_id: string | null;
   tags: string[];
   done: boolean;
+  updated_at: string;
 }
 
 interface ProjectRow {
@@ -56,6 +57,7 @@ function toTask(row: TaskRow): Task {
     projectId: row.project_id ?? undefined,
     tags: row.tags.length > 0 ? row.tags : undefined,
     done: row.done,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -179,7 +181,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         supabase.from("projects").select("id, group_id, name, color").order("sort_order").order("created_at"),
         supabase
           .from("tasks")
-          .select("id, title, notes, bucket, when_at, due, deadline, repeat, project_id, tags, done")
+          .select("id, title, notes, bucket, when_at, due, deadline, repeat, project_id, tags, done, updated_at")
           .order("sort_order")
           .order("created_at"),
       ]);
@@ -198,7 +200,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           supabase.from("projects").select("id, group_id, name, color").order("sort_order").order("created_at"),
           supabase
             .from("tasks")
-            .select("id, title, notes, bucket, when_at, due, deadline, repeat, project_id, tags, done")
+            .select("id, title, notes, bucket, when_at, due, deadline, repeat, project_id, tags, done, updated_at")
             .order("sort_order")
             .order("created_at"),
         ]);
@@ -375,7 +377,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         project_id: payload.projectId ?? null,
         tags: payload.tags ?? [],
       })
-      .select("id, title, notes, bucket, when_at, due, deadline, repeat, project_id, tags, done")
+      .select("id, title, notes, bucket, when_at, due, deadline, repeat, project_id, tags, done, updated_at")
       .single();
     if (error || !data) {
       setTasks((ts) => ts.filter((t) => t.id !== tempId));

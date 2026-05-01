@@ -36,6 +36,8 @@ export interface Task {
   projectId?: string;
   tags?: string[];
   done: boolean;
+  // ISO timestamp; Logbook uses this as a proxy for completedAt
+  updatedAt?: string;
 }
 
 export type View =
@@ -44,6 +46,7 @@ export type View =
   | { type: "inbox" }
   | { type: "anytime" }
   | { type: "someday" }
+  | { type: "logbook" }
   | { type: "project"; id: string };
 
 export interface Counts {
@@ -60,7 +63,8 @@ export type IconName =
   | "inbox" | "search" | "plus" | "tag" | "flag"
   | "more" | "chev" | "chev-d" | "check" | "x"
   | "folder" | "list" | "filter" | "settings"
-  | "repeat" | "attachment" | "drop" | "trash";
+  | "repeat" | "attachment" | "drop" | "trash"
+  | "archive" | "comment" | "subtask";
 
 export interface NewTaskPayload {
   title: string;

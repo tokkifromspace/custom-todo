@@ -9,6 +9,7 @@ import { TodayView } from "./views/TodayView";
 import { ProjectView } from "./views/ProjectView";
 import { UpcomingView } from "./views/UpcomingView";
 import { ListView } from "./views/ListView";
+import { LogbookView } from "./views/LogbookView";
 import { computeCounts } from "./data/helpers";
 import { useData } from "./lib/data";
 import { useAuth } from "./lib/auth";
@@ -211,9 +212,20 @@ function App() {
         onQuickAdd={() => setQuickAdd(true)}
       />
     );
+  } else if (view.type === "logbook") {
+    pane = (
+      <LogbookView
+        tasks={tasks}
+        projectsById={projectsById}
+        onUncomplete={toggleTask}
+      />
+    );
   }
 
-  const meshClass = view.type === "today" || view.type === "inbox" ? "mesh-warm" : "mesh-cool";
+  const meshClass =
+    view.type === "today" || view.type === "inbox" || view.type === "logbook"
+      ? "mesh-warm"
+      : "mesh-cool";
 
   return (
     <div
