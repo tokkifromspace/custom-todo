@@ -11,8 +11,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png"],
       manifest: {
-        name: "keepgoing",
-        short_name: "keepgoing",
+        name: "Keepgoing",
+        short_name: "Keepgoing",
         description: "A liquid-glass to-do list. Today, evening, and the long horizon.",
         theme_color: "#FDDCD1",
         background_color: "#ffffff",
