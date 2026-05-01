@@ -318,7 +318,14 @@ export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProje
             </div>
           )}
         </div>
-        <span style={{ flex: 1 }}>Logbook</span>
+        <button
+          type="button"
+          className={`logbook-link ${view.type === "logbook" ? "active" : ""}`}
+          onClick={() => onNavigate({ type: "logbook" })}
+        >
+          <Icon name="archive" size={12} style={{ color: "var(--done)" }} />
+          <span>Logbook</span>
+        </button>
       </div>
     </div>
   );
