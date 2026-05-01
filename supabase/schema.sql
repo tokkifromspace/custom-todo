@@ -11,7 +11,8 @@ create table if not exists public.groups (
   color text not null,
   sort_order int not null default 0,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint groups_user_name_unique unique (user_id, name)
 );
 
 create index if not exists groups_user_id_idx on public.groups(user_id);
@@ -24,7 +25,8 @@ create table if not exists public.projects (
   color text not null,
   sort_order int not null default 0,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint projects_user_name_unique unique (user_id, name)
 );
 
 create index if not exists projects_user_id_idx on public.projects(user_id);
@@ -59,6 +61,24 @@ alter table public.tasks add column if not exists deadline date;
 alter table public.tasks drop constraint if exists tasks_when_at_check;
 alter table public.tasks add constraint tasks_when_at_check
   check (when_at in ('today', 'evening', 'tomorrow', 'scheduled', 'anytime', 'someday', 'inbox'));
+
+-- Block the seed-twice race that produced duplicate Work / Personal groups
+-- and shadow project rows. If a second seedNewUser() runs concurrently or
+-- after the first, the group insert hits this constraint and the whole
+-- transaction aborts before any projects/tasks land.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'groups_user_name_unique'
+  ) then
+    alter table public.groups add constraint groups_user_name_unique unique (user_id, name);
+  end if;
+  if not exists (
+    select 1 from pg_constraint where conname = 'projects_user_name_unique'
+  ) then
+    alter table public.projects add constraint projects_user_name_unique unique (user_id, name);
+  end if;
+end $$;
 
 -- 2) updated_at trigger ------------------------------------------------------
 
