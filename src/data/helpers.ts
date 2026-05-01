@@ -217,7 +217,7 @@ export function computeCounts(tasks: Task[]): Counts {
   };
   for (const t of tasks) {
     if (t.done) continue;
-    if (!t.projectId && t.when === "inbox") counts.inbox++;
+    if (!t.projectId && t.bucket !== "today" && t.bucket !== "evening") counts.inbox++;
     if (t.bucket === "today" || t.bucket === "evening") counts.today++;
     if (isUpcoming(t.due, today)) counts.upcoming++;
     if (t.when === "anytime") counts.anytime++;

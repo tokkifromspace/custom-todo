@@ -49,7 +49,7 @@ interface Props {
   onDelete: (task: Task) => void;
   onEdit: (task: Task) => void;
   onSetDue: (id: string, due: string | null) => void;
-  onReorder: (orderedIds: string[]) => void;
+  onReorder?: (orderedIds: string[]) => void;
   projectsById: Record<string, Project>;
   showProject?: boolean;
   compact?: boolean;
@@ -69,6 +69,26 @@ export function SortableTaskList({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
+
+  if (!onReorder) {
+    return (
+      <>
+        {tasks.map((t) => (
+          <TaskRow
+            key={t.id}
+            task={t}
+            onToggle={onToggle}
+            onDelete={onDelete}
+            onEdit={onEdit}
+            onSetDue={onSetDue}
+            projectsById={projectsById}
+            showProject={showProject}
+            compact={compact}
+          />
+        ))}
+      </>
+    );
+  }
 
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
