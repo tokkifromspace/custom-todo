@@ -58,7 +58,7 @@ export type IconName =
   | "inbox" | "search" | "plus" | "tag" | "flag"
   | "more" | "chev" | "chev-d" | "check" | "x"
   | "folder" | "list" | "filter" | "settings"
-  | "bell" | "repeat" | "attachment" | "drop";
+  | "bell" | "repeat" | "attachment" | "drop" | "trash";
 
 export interface NewTaskPayload {
   title: string;

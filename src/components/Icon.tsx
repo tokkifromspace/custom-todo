@@ -66,6 +66,8 @@ export function Icon({ name, size = 16, style }: Props) {
       return <svg {...props}><path d="M11 4.5L6 9.5a2 2 0 102.8 2.8L13 8a3.5 3.5 0 10-5-5L4 7"/></svg>;
     case "drop":
       return <svg {...props}><path d="M8 2c2.5 3 4 5 4 7a4 4 0 11-8 0c0-2 1.5-4 4-7z"/></svg>;
+    case "trash":
+      return <svg {...props}><path d="M3 4.5h10M5.5 4.5V3a.5.5 0 01.5-.5h4a.5.5 0 01.5.5v1.5M4.5 4.5l.5 8a.5.5 0 00.5.5h5a.5.5 0 00.5-.5l.5-8M7 7v4M9 7v4"/></svg>;
     default:
       return <svg {...props}><circle cx="8" cy="8" r="3"/></svg>;
   }

@@ -6,6 +6,7 @@ import { dayFromDue } from "../data/helpers";
 interface Props {
   tasks: Task[];
   onToggle: (id: string) => void;
+  onDelete: (task: Task) => void;
   projectsById: Record<string, Project>;
   onQuickAdd: () => void;
 }
@@ -17,7 +18,7 @@ interface DayCell {
   tasks?: Task[];
 }
 
-export function UpcomingView({ tasks, onToggle, projectsById, onQuickAdd }: Props) {
+export function UpcomingView({ tasks, onToggle, onDelete, projectsById, onQuickAdd }: Props) {
   const byDay: Record<number, Task[]> = {};
   for (const t of tasks) {
     if (t.done) continue;
@@ -201,7 +202,7 @@ export function UpcomingView({ tasks, onToggle, projectsById, onQuickAdd }: Prop
           </div>
           <div className="tasks">
             {todayTasks.map((t) => (
-              <TaskRow key={t.id} task={t} onToggle={onToggle} showProject compact projectsById={projectsById} />
+              <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} showProject compact projectsById={projectsById} />
             ))}
           </div>
         </div>

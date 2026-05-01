@@ -8,11 +8,12 @@ interface Props {
   group: Group | undefined;
   tasks: Task[];
   onToggle: (id: string) => void;
+  onDelete: (task: Task) => void;
   projectsById: Record<string, Project>;
   onQuickAdd: () => void;
 }
 
-export function ProjectView({ project, group, tasks, onToggle, projectsById, onQuickAdd }: Props) {
+export function ProjectView({ project, group, tasks, onToggle, onDelete, projectsById, onQuickAdd }: Props) {
   const projTasks = tasks.filter((t) => t.projectId === project.id);
   const inFlight = projTasks.filter((t) => !t.done && t.when !== "someday");
   const someday = projTasks.filter((t) => !t.done && t.when === "someday");
@@ -70,7 +71,7 @@ export function ProjectView({ project, group, tasks, onToggle, projectsById, onQ
             />
             <div className="tasks">
               {inFlight.map((t) => (
-                <TaskRow key={t.id} task={t} onToggle={onToggle} projectsById={projectsById} />
+                <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} projectsById={projectsById} />
               ))}
             </div>
           </>
@@ -85,7 +86,7 @@ export function ProjectView({ project, group, tasks, onToggle, projectsById, onQ
             />
             <div className="tasks">
               {someday.map((t) => (
-                <TaskRow key={t.id} task={t} onToggle={onToggle} projectsById={projectsById} />
+                <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} projectsById={projectsById} />
               ))}
             </div>
           </>
@@ -107,7 +108,7 @@ export function ProjectView({ project, group, tasks, onToggle, projectsById, onQ
             </div>
             <div className="tasks">
               {logbook.map((t) => (
-                <TaskRow key={t.id} task={t} onToggle={onToggle} projectsById={projectsById} />
+                <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} projectsById={projectsById} />
               ))}
             </div>
           </div>

@@ -21,10 +21,11 @@ interface Props {
   projects: Project[];
   counts: Counts;
   onAddProject: (groupId: string, name: string) => void | Promise<void>;
+  onDeleteProject: (id: string) => void | Promise<void>;
   onSignOut?: () => void;
 }
 
-export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProject, onSignOut }: Props) {
+export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProject, onDeleteProject, onSignOut }: Props) {
   const [openInput, setOpenInput] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -133,10 +134,23 @@ export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProje
               onClick={() => onNavigate({ type: "project", id: p.id })}
             >
               <ProjectSwatch color={p.color} />
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {p.name}
               </span>
               {counts.byProject[p.id] > 0 && <span className="count">{counts.byProject[p.id]}</span>}
+              <button
+                type="button"
+                className="nav-project-delete"
+                aria-label={`Delete ${p.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm(`Delete "${p.name}"? Its tasks will become unassigned.`)) {
+                    void onDeleteProject(p.id);
+                  }
+                }}
+              >
+                <Icon name="x" size={11} />
+              </button>
             </div>
           ))}
           {openInput === g.id && (

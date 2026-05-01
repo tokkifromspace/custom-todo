@@ -9,11 +9,12 @@ interface Props {
   subtitle?: string;
   tasks: Task[];
   onToggle: (id: string) => void;
+  onDelete: (task: Task) => void;
   projectsById: Record<string, Project>;
   onQuickAdd: () => void;
 }
 
-export function ListView({ title, glyph, glyphColor, subtitle, tasks, onToggle, projectsById, onQuickAdd }: Props) {
+export function ListView({ title, glyph, glyphColor, subtitle, tasks, onToggle, onDelete, projectsById, onQuickAdd }: Props) {
   return (
     <div className="main">
       <div className="toolbar glass">
@@ -47,7 +48,7 @@ export function ListView({ title, glyph, glyphColor, subtitle, tasks, onToggle, 
         {tasks.length > 0 && (
           <div className="tasks">
             {tasks.map((t) => (
-              <TaskRow key={t.id} task={t} onToggle={onToggle} showProject projectsById={projectsById} />
+              <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} showProject projectsById={projectsById} />
             ))}
           </div>
         )}

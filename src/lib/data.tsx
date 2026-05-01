@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { supabase } from "./supabase";
 import { useAuth } from "./auth";
@@ -78,9 +78,13 @@ interface DataContextValue {
   tasks: Task[];
   loading: boolean;
   error: string | null;
+  pendingDelete: Task | null;
   toggleTask: (id: string) => Promise<void>;
   addTask: (payload: NewTaskPayload) => Promise<void>;
   addProject: (groupId: string, name: string) => Promise<Project | null>;
+  deleteTask: (task: Task) => void;
+  undoDeleteTask: () => void;
+  deleteProject: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -94,8 +98,37 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Task | null>(null);
 
+  const tasksRef = useRef<Task[]>([]);
+  const projectsRef = useRef<Project[]>([]);
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
+
+  const pendingDeleteRef = useRef<{
+    task: Task;
+    index: number;
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+
+  const finalizePendingDelete = useCallback(async () => {
+    const pending = pendingDeleteRef.current;
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    pendingDeleteRef.current = null;
+    setPendingDelete(null);
+    const { error } = await supabase.from("tasks").delete().eq("id", pending.task.id);
+    if (error) setError(error.message);
+  }, []);
+
+  const loadingRef = useRef(false);
   const loadAll = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -142,6 +175,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   }, []);
 
@@ -246,15 +280,90 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [groups],
   );
 
+  const deleteTask = useCallback(
+    (task: Task) => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        setError(OFFLINE_MESSAGE);
+        return;
+      }
+      // commit any prior pending delete immediately before queuing a new one
+      if (pendingDeleteRef.current) {
+        const prior = pendingDeleteRef.current;
+        clearTimeout(prior.timer);
+        pendingDeleteRef.current = null;
+        void supabase
+          .from("tasks")
+          .delete()
+          .eq("id", prior.task.id)
+          .then(({ error }) => {
+            if (error) setError(error.message);
+          });
+      }
+      const idx = tasksRef.current.findIndex((t) => t.id === task.id);
+      if (idx === -1) return;
+      setTasks((ts) => ts.filter((t) => t.id !== task.id));
+      const timer = setTimeout(() => {
+        void finalizePendingDelete();
+      }, 5000);
+      pendingDeleteRef.current = { task, index: idx, timer };
+      setPendingDelete(task);
+    },
+    [finalizePendingDelete],
+  );
+
+  const undoDeleteTask = useCallback(() => {
+    const pending = pendingDeleteRef.current;
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    pendingDeleteRef.current = null;
+    setPendingDelete(null);
+    setTasks((ts) => {
+      const insertAt = Math.min(pending.index, ts.length);
+      return [...ts.slice(0, insertAt), pending.task, ...ts.slice(insertAt)];
+    });
+  }, []);
+
+  const deleteProject = useCallback(async (id: string) => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setError(OFFLINE_MESSAGE);
+      return;
+    }
+    const removed = projectsRef.current.find((p) => p.id === id);
+    if (!removed) return;
+    const affectedTaskIds = tasksRef.current
+      .filter((t) => t.projectId === id)
+      .map((t) => t.id);
+
+    setProjects((ps) => ps.filter((p) => p.id !== id));
+    setTasks((ts) =>
+      ts.map((t) => (t.projectId === id ? { ...t, projectId: undefined } : t)),
+    );
+
+    const { error } = await supabase.from("projects").delete().eq("id", id);
+    if (error) {
+      // revert
+      setProjects((ps) => [...ps, removed]);
+      const affectedSet = new Set(affectedTaskIds);
+      setTasks((ts) =>
+        ts.map((t) => (affectedSet.has(t.id) ? { ...t, projectId: id } : t)),
+      );
+      setError(error.message);
+    }
+  }, []);
+
   const value: DataContextValue = {
     groups,
     projects,
     tasks,
     loading,
     error,
+    pendingDelete,
     toggleTask,
     addTask,
     addProject,
+    deleteTask,
+    undoDeleteTask,
+    deleteProject,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

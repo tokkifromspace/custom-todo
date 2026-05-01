@@ -5,12 +5,13 @@ import { Icon } from "./Icon";
 interface Props {
   task: Task;
   onToggle?: (id: string) => void;
+  onDelete?: (task: Task) => void;
   showProject?: boolean;
   compact?: boolean;
   projectsById: Record<string, Project>;
 }
 
-export function TaskRow({ task, onToggle, showProject, compact, projectsById }: Props) {
+export function TaskRow({ task, onToggle, onDelete, showProject, compact, projectsById }: Props) {
   const overdue = task.due && task.dueOverdue;
   const isToday = task.due && task.dueToday;
   const project = task.projectId ? projectsById[task.projectId] : null;
@@ -71,9 +72,17 @@ export function TaskRow({ task, onToggle, showProject, compact, projectsById }: 
         <span className="icon-btn">
           <Icon name="tag" size={14} />
         </span>
-        <span className="icon-btn">
-          <Icon name="more" size={14} />
-        </span>
+        <button
+          type="button"
+          className="icon-btn delete"
+          aria-label="Delete task"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete?.(task);
+          }}
+        >
+          <Icon name="trash" size={14} />
+        </button>
       </div>
     </div>
   );

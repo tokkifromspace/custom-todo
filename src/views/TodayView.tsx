@@ -6,11 +6,12 @@ import { GroupHeader } from "../components/GroupHeader";
 interface Props {
   tasks: Task[];
   onToggle: (id: string) => void;
+  onDelete: (task: Task) => void;
   projectsById: Record<string, Project>;
   onQuickAdd: () => void;
 }
 
-export function TodayView({ tasks, onToggle, projectsById, onQuickAdd }: Props) {
+export function TodayView({ tasks, onToggle, onDelete, projectsById, onQuickAdd }: Props) {
   const today = tasks.filter((t) => t.bucket === "today");
   const evening = tasks.filter((t) => t.bucket === "evening");
   const remaining = today.filter((t) => !t.done).length;
@@ -60,7 +61,7 @@ export function TodayView({ tasks, onToggle, projectsById, onQuickAdd }: Props) 
             <GroupHeader kind="today" label="Today" />
             <div className="tasks">
               {today.map((t) => (
-                <TaskRow key={t.id} task={t} onToggle={onToggle} showProject projectsById={projectsById} />
+                <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} showProject projectsById={projectsById} />
               ))}
             </div>
           </>
@@ -71,7 +72,7 @@ export function TodayView({ tasks, onToggle, projectsById, onQuickAdd }: Props) 
             <GroupHeader kind="evening" label="This Evening" />
             <div className="tasks">
               {evening.map((t) => (
-                <TaskRow key={t.id} task={t} onToggle={onToggle} showProject projectsById={projectsById} />
+                <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} showProject projectsById={projectsById} />
               ))}
             </div>
           </>

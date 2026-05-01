@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Group, NewTaskPayload, Project, View } from "./types";
 import { Sidebar } from "./components/Sidebar";
 import { NewTaskModal } from "./components/NewTaskModal";
+import { UndoToast } from "./components/UndoToast";
 import { TodayView } from "./views/TodayView";
 import { ProjectView } from "./views/ProjectView";
 import { UpcomingView } from "./views/UpcomingView";
@@ -11,10 +12,29 @@ import { useData } from "./lib/data";
 import { useAuth } from "./lib/auth";
 
 function App() {
-  const { groups, projects, tasks, loading, error, toggleTask, addTask, addProject } = useData();
+  const {
+    groups,
+    projects,
+    tasks,
+    loading,
+    error,
+    pendingDelete,
+    toggleTask,
+    addTask,
+    addProject,
+    deleteTask,
+    undoDeleteTask,
+    deleteProject,
+  } = useData();
   const { signOut } = useAuth();
   const [view, setView] = useState<View>({ type: "today" });
   const [quickAdd, setQuickAdd] = useState(false);
+
+  useEffect(() => {
+    if (view.type === "project" && !projects.some((p) => p.id === view.id)) {
+      setView({ type: "today" });
+    }
+  }, [view, projects]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -70,6 +90,7 @@ function App() {
       <TodayView
         tasks={tasks}
         onToggle={toggleTask}
+        onDelete={deleteTask}
         projectsById={projectsById}
         onQuickAdd={() => setQuickAdd(true)}
       />
@@ -84,6 +105,7 @@ function App() {
           group={group}
           tasks={tasks}
           onToggle={toggleTask}
+          onDelete={deleteTask}
           projectsById={projectsById}
           onQuickAdd={() => setQuickAdd(true)}
         />
@@ -94,6 +116,7 @@ function App() {
       <UpcomingView
         tasks={tasks}
         onToggle={toggleTask}
+        onDelete={deleteTask}
         projectsById={projectsById}
         onQuickAdd={() => setQuickAdd(true)}
       />
@@ -108,6 +131,7 @@ function App() {
         subtitle="Unsorted · drop in any thought"
         tasks={list}
         onToggle={toggleTask}
+        onDelete={deleteTask}
         projectsById={projectsById}
         onQuickAdd={() => setQuickAdd(true)}
       />
@@ -122,6 +146,7 @@ function App() {
         subtitle="No specific time — pick when ready"
         tasks={list}
         onToggle={toggleTask}
+        onDelete={deleteTask}
         projectsById={projectsById}
         onQuickAdd={() => setQuickAdd(true)}
       />
@@ -136,6 +161,7 @@ function App() {
         subtitle="Maybe later — out of mind, not lost"
         tasks={list}
         onToggle={toggleTask}
+        onDelete={deleteTask}
         projectsById={projectsById}
         onQuickAdd={() => setQuickAdd(true)}
       />
@@ -158,6 +184,7 @@ function App() {
         projects={projects}
         counts={counts}
         onAddProject={handleAddProject}
+        onDeleteProject={deleteProject}
         onSignOut={() => void signOut()}
       />
       {pane}
@@ -173,6 +200,7 @@ function App() {
         projects={projects}
         defaultProjectId={defaultProjectId}
       />
+      <UndoToast pending={pendingDelete} onUndo={undoDeleteTask} />
     </div>
   );
 }
