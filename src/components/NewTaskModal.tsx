@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { IconName, NewTaskPayload, Project, Task, When } from "../types";
-import { formatDue, parseRepeat, serializeRepeat, toIsoDate, todayIso } from "../data/helpers";
+import { formatDue, fromIsoDate, parseRepeat, serializeRepeat, toIsoDate, todayIso } from "../data/helpers";
 import type { RepeatInterval } from "../data/helpers";
 import { Icon } from "./Icon";
 
@@ -28,6 +28,8 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
   const [deadline, setDeadline] = useState<string | null>(null);
   const [showRepeat, setShowRepeat] = useState(false);
   const [repeatInterval, setRepeatInterval] = useState<RepeatInterval>("weekly");
+  const [repeatDow, setRepeatDow] = useState<number>(1); // Mon
+  const [repeatDom, setRepeatDom] = useState<number>(1);
   const [repeatFromCompletion, setRepeatFromCompletion] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(defaultProjectId ?? null);
   const [tags, setTags] = useState<string[]>([]);
@@ -50,6 +52,17 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
       setShowRepeat(!!spec);
       setRepeatInterval(spec?.interval ?? "weekly");
       setRepeatFromCompletion(spec?.from === "completion");
+      const baseDate = editingTask.due ? fromIsoDate(editingTask.due) : null;
+      if (spec?.interval === "weekly" || spec?.interval === "biweekly") {
+        setRepeatDow(spec.dayParam ?? baseDate?.getDay() ?? new Date().getDay());
+      } else {
+        setRepeatDow(baseDate?.getDay() ?? new Date().getDay());
+      }
+      if (spec?.interval === "monthly") {
+        setRepeatDom(spec.dayParam ?? baseDate?.getDate() ?? new Date().getDate());
+      } else {
+        setRepeatDom(baseDate?.getDate() ?? new Date().getDate());
+      }
       setProjectId(editingTask.projectId ?? null);
       setTags(editingTask.tags ?? []);
     } else {
@@ -61,6 +74,8 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
       setShowRepeat(false);
       setRepeatInterval("weekly");
       setRepeatFromCompletion(false);
+      setRepeatDow(new Date().getDay());
+      setRepeatDom(new Date().getDate());
       setProjectId(defaultProjectId ?? null);
       setTags([]);
     }
@@ -81,9 +96,16 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
       t.setDate(t.getDate() + 1);
       due = toIsoDate(t);
     }
+    let repeatDayParam: number | null = null;
+    if (repeatInterval === "weekly" || repeatInterval === "biweekly") {
+      repeatDayParam = repeatDow;
+    } else if (repeatInterval === "monthly") {
+      repeatDayParam = repeatDom;
+    }
     const repeat = showRepeat
       ? serializeRepeat({
           interval: repeatInterval,
+          dayParam: repeatDayParam,
           from: repeatFromCompletion ? "completion" : "due",
         }) ?? undefined
       : undefined;
@@ -311,20 +333,67 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
                 <span>Add repeat</span>
               </button>
             ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <Icon name="repeat" size={12} style={{ color: "var(--fg-3)" }} />
-                <select
-                  value={repeatInterval}
-                  onChange={(e) => setRepeatInterval(e.target.value as RepeatInterval)}
-                  className="auth-input"
-                  style={{ height: 32, fontSize: 12.5, padding: "0 8px" }}
-                >
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="biweekly">Bi-weekly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-                <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--fg-2)", cursor: "default" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <Icon name="repeat" size={12} style={{ color: "var(--fg-3)" }} />
+                  <select
+                    value={repeatInterval}
+                    onChange={(e) => setRepeatInterval(e.target.value as RepeatInterval)}
+                    className="auth-input"
+                    style={{ height: 32, fontSize: 12.5, padding: "0 8px" }}
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="biweekly">Bi-weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                  {(repeatInterval === "weekly" || repeatInterval === "biweekly") && (
+                    <div style={{ display: "flex", gap: 2 }}>
+                      {["S", "M", "T", "W", "T", "F", "S"].map((label, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setRepeatDow(i)}
+                          className={`dow-btn ${repeatDow === i ? "active" : ""}`}
+                          aria-pressed={repeatDow === i}
+                          aria-label={["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][i]}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {repeatInterval === "monthly" && (
+                    <input
+                      type="number"
+                      min={1}
+                      max={31}
+                      value={repeatDom}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        if (Number.isFinite(v)) setRepeatDom(Math.max(1, Math.min(31, v)));
+                      }}
+                      className="auth-input"
+                      style={{ height: 32, fontSize: 12.5, padding: "0 8px", width: 56 }}
+                      aria-label="Day of month"
+                    />
+                  )}
+                  <span style={{ flex: 1 }} />
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    style={{ width: 26, height: 26 }}
+                    onClick={() => {
+                      setShowRepeat(false);
+                      setRepeatFromCompletion(false);
+                      setRepeatInterval("weekly");
+                    }}
+                    title="Remove repeat"
+                  >
+                    <Icon name="x" size={12} />
+                  </button>
+                </div>
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--fg-2)", cursor: "default", paddingLeft: 22 }}>
                   <input
                     type="checkbox"
                     checked={repeatFromCompletion}
@@ -332,20 +401,6 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
                   />
                   From completion
                 </label>
-                <span style={{ flex: 1 }} />
-                <button
-                  type="button"
-                  className="icon-btn"
-                  style={{ width: 26, height: 26 }}
-                  onClick={() => {
-                    setShowRepeat(false);
-                    setRepeatFromCompletion(false);
-                    setRepeatInterval("weekly");
-                  }}
-                  title="Remove repeat"
-                >
-                  <Icon name="x" size={12} />
-                </button>
               </div>
             )}
           </div>

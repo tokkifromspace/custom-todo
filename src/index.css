@@ -476,6 +476,27 @@ body { background: var(--bg-wall); color: var(--fg); }
   cursor: default;
 }
 .calendar-input:hover { background: var(--bg-hover); color: var(--accent); }
+.dow-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--fg-3);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: default;
+  padding: 0;
+}
+.dow-btn:hover { background: var(--bg-hover); color: var(--fg-2); }
+.dow-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+
 .calendar-input input[type="date"]::-webkit-calendar-picker-indicator {
   position: absolute;
   inset: 0;
