@@ -472,21 +472,7 @@ body { background: var(--bg-wall); color: var(--fg); }
 .task-row .icon-btn.delete { cursor: default; }
 .task-row .icon-btn.delete:hover { background: var(--bg-hover); color: var(--due); }
 
-.calendar-input { position: relative; cursor: default; }
-.calendar-input input[type="date"] {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: none;
-  background: transparent;
-  color: transparent;
-  opacity: 0;
-  padding: 0;
-  margin: 0;
-  cursor: default;
-}
-.calendar-input:hover { background: var(--bg-hover); color: var(--accent); }
+.task-row .icon-btn.has-value { color: var(--accent); }
 .dow-btn {
   width: 26px;
   height: 26px;
@@ -506,15 +492,6 @@ body { background: var(--bg-wall); color: var(--fg); }
   border-color: var(--accent);
   color: white;
   font-weight: 600;
-}
-
-.calendar-input input[type="date"]::-webkit-calendar-picker-indicator {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  cursor: default;
-  opacity: 0;
 }
 
 .group-h {

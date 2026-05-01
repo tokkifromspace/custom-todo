@@ -1,7 +1,8 @@
 import type { Project, Task } from "../types";
-import { formatDue, formatRepeat, isDueToday, isOverdue } from "../data/helpers";
+import { formatDue, formatRepeat, fromIsoDate, isDueToday, isOverdue, toIsoDate } from "../data/helpers";
 import { Checkbox } from "./Checkbox";
 import { Icon } from "./Icon";
+import { DatePicker } from "./DatePicker";
 
 interface Props {
   task: Task;
@@ -76,19 +77,25 @@ export function TaskRow({ task, onToggle, onDelete, onEdit, onSetDue, showProjec
         )}
       </div>
       <div className="right-actions">
-        <label
-          className="icon-btn calendar-input"
-          aria-label="Set due date"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Icon name="calendar" size={14} />
-          <input
-            type="date"
-            value={task.due ?? ""}
-            onChange={(e) => onSetDue?.(task.id, e.target.value || null)}
-            tabIndex={-1}
-          />
-        </label>
+        <DatePicker
+          value={task.due ? fromIsoDate(task.due) : null}
+          onChange={(d) => onSetDue?.(task.id, d ? toIsoDate(d) : null)}
+          renderTrigger={({ ref, onClick, onKeyDown, hasValue }) => (
+            <button
+              ref={ref}
+              type="button"
+              className={`icon-btn${hasValue ? " has-value" : ""}`}
+              aria-label="Set due date"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+              }}
+              onKeyDown={onKeyDown}
+            >
+              <Icon name="calendar" size={14} />
+            </button>
+          )}
+        />
         <span className="icon-btn">
           <Icon name="tag" size={14} />
         </span>
