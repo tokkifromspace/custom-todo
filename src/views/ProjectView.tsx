@@ -4,6 +4,7 @@ import type { Group, Project, Task } from "../types";
 import { Icon } from "../components/Icon";
 import { SortableTaskList } from "../components/SortableTaskList";
 import { GroupHeader } from "../components/GroupHeader";
+import { isUpcoming, todayIso } from "../data/helpers";
 
 interface Props {
   project: Project;
@@ -52,8 +53,18 @@ export function ProjectView({ project, group, tasks, onToggle, onDelete, onEdit,
 
   const projTasks = tasks.filter((t) => t.projectId === project.id);
   const visible = (t: Task) => !t.done || recentlyCompleted.has(t.id);
-  const inFlight = projTasks.filter((t) => visible(t) && t.when !== "someday");
-  const someday = projTasks.filter((t) => visible(t) && t.when === "someday");
+  const todayKey = todayIso();
+  const todaySection: Task[] = [];
+  const upcoming: Task[] = [];
+  const anytime: Task[] = [];
+  const someday: Task[] = [];
+  for (const t of projTasks) {
+    if (!visible(t)) continue;
+    if (t.bucket === "today" || t.bucket === "evening") todaySection.push(t);
+    else if (t.when === "someday") someday.push(t);
+    else if (isUpcoming(t.due, todayKey)) upcoming.push(t);
+    else anytime.push(t);
+  }
   const totalDone = projTasks.filter((t) => t.done).length;
   const total = projTasks.length;
 
@@ -132,16 +143,58 @@ export function ProjectView({ project, group, tasks, onToggle, onDelete, onEdit,
           </div>
         </div>
 
-        {inFlight.length > 0 && (
+        {todaySection.length > 0 && (
           <>
             <GroupHeader
               kind="today"
-              label="In Flight"
-              count={`${inFlight.length} task${inFlight.length === 1 ? "" : "s"}`}
+              label="Today"
+              count={`${todaySection.length} task${todaySection.length === 1 ? "" : "s"}`}
             />
             <div className="tasks">
               <SortableTaskList
-                tasks={inFlight}
+                tasks={todaySection}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                onSetDue={onSetDue}
+                onReorder={onReorder}
+                projectsById={projectsById}
+              />
+            </div>
+          </>
+        )}
+
+        {upcoming.length > 0 && (
+          <>
+            <GroupHeader
+              kind="upcoming"
+              label="Upcoming"
+              count={`${upcoming.length} task${upcoming.length === 1 ? "" : "s"}`}
+            />
+            <div className="tasks">
+              <SortableTaskList
+                tasks={upcoming}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                onSetDue={onSetDue}
+                onReorder={onReorder}
+                projectsById={projectsById}
+              />
+            </div>
+          </>
+        )}
+
+        {anytime.length > 0 && (
+          <>
+            <GroupHeader
+              kind="anytime"
+              label="Anytime"
+              count={`${anytime.length} task${anytime.length === 1 ? "" : "s"}`}
+            />
+            <div className="tasks">
+              <SortableTaskList
+                tasks={anytime}
                 onToggle={onToggle}
                 onDelete={onDelete}
                 onEdit={onEdit}

@@ -25,7 +25,7 @@ export function Icon({ name, size = 16, style }: Props) {
     case "sun":
       return <svg {...props}><circle cx="8" cy="8" r="2.8"/><path d="M8 1.5v1.5M8 13v1.5M2.5 8H1M15 8h-1.5M3.7 3.7l1 1M11.3 11.3l1 1M3.7 12.3l1-1M11.3 4.7l1-1"/></svg>;
     case "moon":
-      return <svg {...props}><path d="M13.5 9.5A5.5 5.5 0 117 3a4.4 4.4 0 006.5 6.5z"/></svg>;
+      return <svg {...props}><path d="M11.5 11A5.5 5.5 0 115 4.5a4.4 4.4 0 006.5 6.5z"/></svg>;
     case "calendar":
       return <svg {...props}><rect x="2" y="3" width="12" height="11" rx="1.6"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/></svg>;
     case "clock":

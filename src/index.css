@@ -437,7 +437,6 @@ body { background: var(--bg-wall); color: var(--fg); }
 .chip.tag { background: oklch(0.6 0.06 80 / 0.10); color: var(--fg-2); }
 .chip.due { color: var(--fg-3); background: transparent; padding: 0; height: auto; }
 .chip.due.overdue { color: var(--due); font-weight: 600; }
-.chip.due.today { color: var(--warm); font-weight: 600; }
 .chip.proj { background: transparent; padding: 0; height: auto; color: var(--fg-3); }
 .chip svg { width: 11px; height: 11px; flex-shrink: 0; }
 

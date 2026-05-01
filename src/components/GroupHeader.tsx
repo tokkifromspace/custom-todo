@@ -1,7 +1,7 @@
 import { Icon } from "./Icon";
 import type { IconName } from "../types";
 
-type Kind = "today" | "evening" | "someday" | "default";
+type Kind = "today" | "evening" | "upcoming" | "anytime" | "someday" | "default";
 
 interface Props {
   kind?: Kind;
@@ -14,6 +14,8 @@ export function GroupHeader({ kind = "default", label, count, time }: Props) {
   const icon: IconName =
     kind === "today" ? "sun" :
     kind === "evening" ? "moon" :
+    kind === "upcoming" ? "calendar" :
+    kind === "anytime" ? "list" :
     kind === "someday" ? "drop" : "list";
   return (
     <div className={`group-h ${kind}`}>
