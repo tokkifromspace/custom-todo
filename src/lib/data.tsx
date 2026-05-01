@@ -4,6 +4,7 @@ import { supabase } from "./supabase";
 import { useAuth } from "./auth";
 import { seedNewUser } from "./seedNewUser";
 import { computeNextDue, parseRepeat } from "../data/helpers";
+import { pickProjectColor } from "../data/colors";
 import type {
   Bucket,
   Group,
@@ -81,6 +82,8 @@ interface DataContextValue {
   updateTask: (id: string, patch: Partial<Task>) => Promise<void>;
   reorderTasks: (orderedIds: string[]) => Promise<void>;
   addProject: (groupId: string, name: string) => Promise<Project | null>;
+  updateProject: (id: string, patch: Partial<Project>) => Promise<void>;
+  reorderProjects: (orderedIds: string[]) => Promise<void>;
   deleteTask: (task: Task) => void;
   undoDeleteTask: () => void;
   deleteProject: (id: string) => Promise<void>;
@@ -341,8 +344,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setError(OFFLINE_MESSAGE);
         return null;
       }
-      const group = groups.find((g) => g.id === groupId);
-      const color = group?.color ?? "var(--accent)";
+      const usedColors = projectsRef.current.map((p) => p.color);
+      const color = pickProjectColor(usedColors);
       const tempId = `temp-${crypto.randomUUID()}`;
       const optimistic: Project = { id: tempId, groupId, name, color };
       setProjects((ps) => [...ps, optimistic]);
@@ -360,7 +363,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setProjects((ps) => ps.map((p) => (p.id === tempId ? real : p)));
       return real;
     },
-    [groups],
+    [],
   );
 
   const deleteTask = useCallback(
@@ -406,6 +409,59 @@ export function DataProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const reorderProjects = useCallback(async (orderedIds: string[]) => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setError(OFFLINE_MESSAGE);
+      return;
+    }
+    if (orderedIds.length === 0) return;
+    if (orderedIds.some((id) => id.startsWith("temp-"))) return;
+
+    const movingSet = new Set(orderedIds);
+    const baseOffset = 1000;
+
+    setProjects((ps) => {
+      const idToProject = new Map(ps.map((p) => [p.id, p]));
+      const queue = orderedIds
+        .map((id) => idToProject.get(id))
+        .filter((p): p is Project => !!p);
+      return ps.map((p) => (movingSet.has(p.id) ? queue.shift() ?? p : p));
+    });
+
+    const ops = orderedIds.map((id, i) =>
+      supabase.from("projects").update({ sort_order: baseOffset + i }).eq("id", id),
+    );
+    const results = await Promise.all(ops);
+    const firstErr = results.find((r) => r.error);
+    if (firstErr?.error) setError(firstErr.error.message);
+  }, []);
+
+  const updateProject = useCallback(async (id: string, patch: Partial<Project>) => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setError(OFFLINE_MESSAGE);
+      return;
+    }
+    if (id.startsWith("temp-")) {
+      setError("This project is still being created — try again in a moment.");
+      return;
+    }
+    const prev = projectsRef.current.find((p) => p.id === id);
+    if (!prev) return;
+
+    setProjects((ps) => ps.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+
+    const dbPatch: Record<string, unknown> = {};
+    if ("name" in patch) dbPatch.name = patch.name;
+    if ("color" in patch) dbPatch.color = patch.color;
+    if ("groupId" in patch) dbPatch.group_id = patch.groupId ?? null;
+
+    const { error } = await supabase.from("projects").update(dbPatch).eq("id", id);
+    if (error) {
+      setProjects((ps) => ps.map((p) => (p.id === id ? prev : p)));
+      setError(error.message);
+    }
+  }, []);
+
   const deleteProject = useCallback(async (id: string) => {
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       setError(OFFLINE_MESSAGE);
@@ -446,6 +502,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updateTask,
     reorderTasks,
     addProject,
+    updateProject,
+    reorderProjects,
     deleteTask,
     undoDeleteTask,
     deleteProject,

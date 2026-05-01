@@ -1,5 +1,20 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { Counts, Group, Project, View } from "../types";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Icon } from "./Icon";
 
 const TrafficLights = () => (
@@ -14,6 +29,49 @@ const ProjectSwatch = ({ color }: { color: string }) => (
   <span className="swatch" style={{ background: color }} />
 );
 
+interface SortableNavProjectProps {
+  project: Project;
+  active: boolean;
+  count: number;
+  onNavigate: () => void;
+  onDelete: () => void;
+}
+function SortableNavProject({ project, active, count, onNavigate, onDelete }: SortableNavProjectProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`nav-project ${active ? "active" : ""}`}
+      onClick={onNavigate}
+    >
+      <ProjectSwatch color={project.color} />
+      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {project.name}
+      </span>
+      {count > 0 && <span className="count">{count}</span>}
+      <button
+        type="button"
+        className="nav-project-delete"
+        aria-label={`Delete ${project.name}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+      >
+        <Icon name="x" size={11} />
+      </button>
+    </div>
+  );
+}
+
 interface Props {
   view: View;
   onNavigate: (v: View) => void;
@@ -22,17 +80,22 @@ interface Props {
   counts: Counts;
   onAddProject: (groupId: string, name: string) => void | Promise<void>;
   onDeleteProject: (id: string) => void | Promise<void>;
+  onReorderProjects: (orderedIds: string[]) => void | Promise<void>;
   onQuickFind?: () => void;
   onChangePassword?: () => void;
   onSignOut?: () => void;
 }
 
-export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProject, onDeleteProject, onQuickFind, onChangePassword, onSignOut }: Props) {
+export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProject, onDeleteProject, onReorderProjects, onQuickFind, onChangePassword, onSignOut }: Props) {
   const [openInput, setOpenInput] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
 
   useEffect(() => {
     if (openInput && inputRef.current) inputRef.current.focus();
@@ -153,32 +216,39 @@ export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProje
               +
             </span>
           </div>
-          {projectsByGroup(g.id).map((p) => (
-            <div
-              key={p.id}
-              className={`nav-project ${isProject(p.id) ? "active" : ""}`}
-              onClick={() => onNavigate({ type: "project", id: p.id })}
-            >
-              <ProjectSwatch color={p.color} />
-              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {p.name}
-              </span>
-              {counts.byProject[p.id] > 0 && <span className="count">{counts.byProject[p.id]}</span>}
-              <button
-                type="button"
-                className="nav-project-delete"
-                aria-label={`Delete ${p.name}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (window.confirm(`Delete "${p.name}"? Its tasks will become unassigned.`)) {
-                    void onDeleteProject(p.id);
-                  }
-                }}
-              >
-                <Icon name="x" size={11} />
-              </button>
-            </div>
-          ))}
+          {(() => {
+            const groupProjects = projectsByGroup(g.id);
+            if (groupProjects.length === 0) return null;
+            const handleDragEnd = (e: DragEndEvent) => {
+              const { active, over } = e;
+              if (!over || active.id === over.id) return;
+              const oldIdx = groupProjects.findIndex((p) => p.id === active.id);
+              const newIdx = groupProjects.findIndex((p) => p.id === over.id);
+              if (oldIdx < 0 || newIdx < 0) return;
+              const reordered = arrayMove(groupProjects, oldIdx, newIdx);
+              void onReorderProjects(reordered.map((p) => p.id));
+            };
+            return (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={groupProjects.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+                  {groupProjects.map((p) => (
+                    <SortableNavProject
+                      key={p.id}
+                      project={p}
+                      active={isProject(p.id)}
+                      count={counts.byProject[p.id] ?? 0}
+                      onNavigate={() => onNavigate({ type: "project", id: p.id })}
+                      onDelete={() => {
+                        if (window.confirm(`Delete "${p.name}"? Its tasks will become unassigned.`)) {
+                          void onDeleteProject(p.id);
+                        }
+                      }}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+            );
+          })()}
           {openInput === g.id && (
             <div className="nav-project" style={{ background: "var(--bg-hover)" }}>
               <ProjectSwatch color={g.color} />

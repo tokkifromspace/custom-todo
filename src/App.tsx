@@ -26,6 +26,8 @@ function App() {
     updateTask,
     reorderTasks,
     addProject,
+    updateProject,
+    reorderProjects,
     deleteTask,
     undoDeleteTask,
     deleteProject,
@@ -133,6 +135,7 @@ function App() {
           onEdit={setEditingTask}
           onSetDue={handleSetDue}
           onReorder={reorderTasks}
+          onRenameProject={(id, name) => void updateProject(id, { name })}
           projectsById={projectsById}
           onQuickAdd={() => setQuickAdd(true)}
         />
@@ -223,6 +226,7 @@ function App() {
         counts={counts}
         onAddProject={handleAddProject}
         onDeleteProject={deleteProject}
+        onReorderProjects={reorderProjects}
         onQuickFind={() => setQuickFindOpen(true)}
         onChangePassword={() => setPwModalOpen(true)}
         onSignOut={() => void signOut()}
