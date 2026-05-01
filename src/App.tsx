@@ -37,6 +37,7 @@ function App() {
   const [pwModalOpen, setPwModalOpen] = useState(false);
   const [view, setView] = useState<View>({ type: "today" });
   const [quickAdd, setQuickAdd] = useState(false);
+  const [quickAddDefaultDate, setQuickAddDefaultDate] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [quickFindOpen, setQuickFindOpen] = useState(false);
 
@@ -90,7 +91,13 @@ function App() {
 
   const closeTaskModal = () => {
     setQuickAdd(false);
+    setQuickAddDefaultDate(null);
     setEditingTask(null);
+  };
+
+  const openQuickAdd = (defaultDate?: string) => {
+    setQuickAddDefaultDate(defaultDate ?? null);
+    setQuickAdd(true);
   };
 
   const handleSetDue = (id: string, due: string | null) => {
@@ -154,7 +161,7 @@ function App() {
         onSetDue={handleSetDue}
         recentlyCompleted={recentlyCompleted}
         projectsById={projectsById}
-        onQuickAdd={() => setQuickAdd(true)}
+        onQuickAdd={openQuickAdd}
       />
     );
   } else if (view.type === "inbox") {
@@ -247,6 +254,7 @@ function App() {
         onSubmit={handleSubmitTask}
         projects={projects}
         defaultProjectId={defaultProjectId}
+        defaultDate={quickAddDefaultDate}
         editingTask={editingTask}
       />
       <UndoToast pending={pendingDelete} onUndo={undoDeleteTask} />
