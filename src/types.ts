@@ -57,7 +57,7 @@ export type IconName =
   | "inbox" | "search" | "plus" | "tag" | "flag"
   | "more" | "chev" | "chev-d" | "check" | "x"
   | "folder" | "list" | "filter" | "settings"
-  | "bell" | "repeat" | "attachment" | "drop" | "trash";
+  | "repeat" | "attachment" | "drop" | "trash";
 
 export interface NewTaskPayload {
   title: string;
@@ -66,6 +66,8 @@ export interface NewTaskPayload {
   bucket?: Bucket | null;
   // ISO YYYY-MM-DD
   due?: string;
+  // serialized repeat: "daily" | "weekly" | "biweekly" | "monthly" | "<interval>:completion"
+  repeat?: string;
   projectId?: string;
   tags?: string[];
 }

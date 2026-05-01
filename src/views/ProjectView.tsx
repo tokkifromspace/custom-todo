@@ -1,6 +1,6 @@
 import type { Group, Project, Task } from "../types";
 import { Icon } from "../components/Icon";
-import { TaskRow } from "../components/TaskRow";
+import { SortableTaskList } from "../components/SortableTaskList";
 import { GroupHeader } from "../components/GroupHeader";
 
 interface Props {
@@ -9,16 +9,18 @@ interface Props {
   tasks: Task[];
   onToggle: (id: string) => void;
   onDelete: (task: Task) => void;
+  onEdit: (task: Task) => void;
+  onSetDue: (id: string, due: string | null) => void;
+  onReorder: (orderedIds: string[]) => void;
   projectsById: Record<string, Project>;
   onQuickAdd: () => void;
 }
 
-export function ProjectView({ project, group, tasks, onToggle, onDelete, projectsById, onQuickAdd }: Props) {
+export function ProjectView({ project, group, tasks, onToggle, onDelete, onEdit, onSetDue, onReorder, projectsById, onQuickAdd }: Props) {
   const projTasks = tasks.filter((t) => t.projectId === project.id);
   const inFlight = projTasks.filter((t) => !t.done && t.when !== "someday");
   const someday = projTasks.filter((t) => !t.done && t.when === "someday");
-  const logbook = projTasks.filter((t) => t.done);
-  const totalDone = logbook.length;
+  const totalDone = projTasks.filter((t) => t.done).length;
   const total = projTasks.length;
 
   return (
@@ -52,9 +54,6 @@ export function ProjectView({ project, group, tasks, onToggle, onDelete, project
             </div>
             <div style={{ display: "flex", gap: 14, marginTop: 12, fontSize: 12, color: "var(--fg-3)" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Icon name="calendar" size={12} />Through May 30
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <Icon name="check" size={12} />
                 {totalDone} of {total} done
               </span>
@@ -70,9 +69,15 @@ export function ProjectView({ project, group, tasks, onToggle, onDelete, project
               count={`${inFlight.length} task${inFlight.length === 1 ? "" : "s"}`}
             />
             <div className="tasks">
-              {inFlight.map((t) => (
-                <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} projectsById={projectsById} />
-              ))}
+              <SortableTaskList
+                tasks={inFlight}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                onSetDue={onSetDue}
+                onReorder={onReorder}
+                projectsById={projectsById}
+              />
             </div>
           </>
         )}
@@ -85,34 +90,19 @@ export function ProjectView({ project, group, tasks, onToggle, onDelete, project
               count={`${someday.length} task${someday.length === 1 ? "" : "s"}`}
             />
             <div className="tasks">
-              {someday.map((t) => (
-                <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} projectsById={projectsById} />
-              ))}
+              <SortableTaskList
+                tasks={someday}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                onSetDue={onSetDue}
+                onReorder={onReorder}
+                projectsById={projectsById}
+              />
             </div>
           </>
         )}
 
-        {logbook.length > 0 && (
-          <div style={{ marginTop: 28 }}>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                color: "var(--fg-4)",
-                padding: "8px 8px",
-              }}
-            >
-              Logbook · {logbook.length} done
-            </div>
-            <div className="tasks">
-              {logbook.map((t) => (
-                <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} projectsById={projectsById} />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

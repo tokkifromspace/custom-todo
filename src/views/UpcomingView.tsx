@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Project, Task } from "../types";
 import { Icon } from "../components/Icon";
 import { TaskRow } from "../components/TaskRow";
@@ -7,6 +8,8 @@ interface Props {
   tasks: Task[];
   onToggle: (id: string) => void;
   onDelete: (task: Task) => void;
+  onEdit: (task: Task) => void;
+  onSetDue: (id: string, due: string | null) => void;
   projectsById: Record<string, Project>;
   onQuickAdd: () => void;
 }
@@ -19,37 +22,48 @@ interface DayCell {
   tasks: Task[];
 }
 
-export function UpcomingView({ tasks, onToggle, onDelete, projectsById, onQuickAdd }: Props) {
+export function UpcomingView({ tasks, onToggle, onDelete, onEdit, onSetDue, projectsById, onQuickAdd }: Props) {
+  const today = new Date();
+  const todayKey = todayIso();
+
+  const [anchor, setAnchor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+
   const byDay: Record<string, Task[]> = {};
   for (const t of tasks) {
     if (t.done || !t.due) continue;
     (byDay[t.due] = byDay[t.due] || []).push(t);
   }
 
-  const today = new Date();
-  const todayKey = todayIso();
+  // Calendar grid: Sunday on or before the 1st through Saturday on or after the last
+  const start = new Date(anchor);
+  start.setDate(1 - anchor.getDay());
 
-  // Calendar starts on the Sunday one week before this week's Sunday
-  // → 5x7 = 35 cells, today usually in the second row
-  const start = new Date(today);
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - start.getDay() - 7);
+  const lastOfMonth = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+  const end = new Date(lastOfMonth);
+  end.setDate(lastOfMonth.getDate() + (6 - lastOfMonth.getDay()));
+  const cellCount = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
 
-  const days: DayCell[] = Array.from({ length: 35 }).map((_, i) => {
+  const days: DayCell[] = Array.from({ length: cellCount }).map((_, i) => {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
     const iso = toIsoDate(d);
     return {
       date: d.getDate(),
       iso,
-      outOfMonth: d.getMonth() !== today.getMonth(),
+      outOfMonth: d.getMonth() !== anchor.getMonth(),
       isToday: iso === todayKey,
       tasks: byDay[iso] ?? [],
     };
   });
 
-  const monthLabel = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const monthLabel = anchor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const todayLabel = today.toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" });
+
+  const goPrev = () => setAnchor((a) => new Date(a.getFullYear(), a.getMonth() - 1, 1));
+  const goNext = () => setAnchor((a) => new Date(a.getFullYear(), a.getMonth() + 1, 1));
+  const goToday = () => setAnchor(new Date(today.getFullYear(), today.getMonth(), 1));
+  const isCurrentMonth =
+    anchor.getFullYear() === today.getFullYear() && anchor.getMonth() === today.getMonth();
 
   const todayTasks = tasks.filter((t) => t.bucket === "today" && !t.done);
 
@@ -68,20 +82,23 @@ export function UpcomingView({ tasks, onToggle, onDelete, projectsById, onQuickA
           <span>· {monthLabel}</span>
         </div>
         <div style={{ flex: 1 }} />
-        <div className="seg">
-          <span className="seg-item active">Month</span>
-          <span className="seg-item">Week</span>
-        </div>
-        <div style={{ display: "flex", gap: 2 }}>
-          <span className="icon-btn" title="Previous month">
+        <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
+          <button type="button" className="icon-btn" title="Previous month" onClick={goPrev}>
             <Icon name="chev" size={12} style={{ transform: "rotate(180deg)" }} />
-          </span>
-          <span className="btn" style={{ background: "transparent" }} title="Jump to today">
+          </button>
+          <button
+            type="button"
+            className="btn"
+            style={{ background: "transparent" }}
+            title="Jump to today"
+            onClick={goToday}
+            disabled={isCurrentMonth}
+          >
             Today
-          </span>
-          <span className="icon-btn" title="Next month">
+          </button>
+          <button type="button" className="icon-btn" title="Next month" onClick={goNext}>
             <Icon name="chev" size={12} />
-          </span>
+          </button>
         </div>
         <button className="btn" onClick={onQuickAdd}>
           <Icon name="plus" size={12} />Quick add<span className="kbd">^N</span>
@@ -215,7 +232,7 @@ export function UpcomingView({ tasks, onToggle, onDelete, projectsById, onQuickA
           </div>
           <div className="tasks">
             {todayTasks.map((t) => (
-              <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} showProject compact projectsById={projectsById} />
+              <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onSetDue={onSetDue} showProject compact projectsById={projectsById} />
             ))}
           </div>
         </div>

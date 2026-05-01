@@ -22,18 +22,39 @@ interface Props {
   counts: Counts;
   onAddProject: (groupId: string, name: string) => void | Promise<void>;
   onDeleteProject: (id: string) => void | Promise<void>;
+  onQuickFind?: () => void;
   onChangePassword?: () => void;
   onSignOut?: () => void;
 }
 
-export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProject, onDeleteProject, onChangePassword, onSignOut }: Props) {
+export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProject, onDeleteProject, onQuickFind, onChangePassword, onSignOut }: Props) {
   const [openInput, setOpenInput] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (openInput && inputRef.current) inputRef.current.focus();
   }, [openInput]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSettingsOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [settingsOpen]);
 
   const closeInput = () => {
     setOpenInput(null);
@@ -55,10 +76,14 @@ export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProje
   return (
     <div className="sidebar">
       <TrafficLights />
-      <div className="side-search">
+      <div
+        className="side-search"
+        onClick={onQuickFind}
+        style={{ cursor: onQuickFind ? "default" : undefined }}
+      >
         <Icon name="search" size={13} />
         <span style={{ flex: 1 }}>Quick find</span>
-        <span className="kbd">⌘K</span>
+        <span className="kbd">^K</span>
       </div>
 
       <div className="nav">
@@ -185,28 +210,45 @@ export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProje
       ))}
 
       <div className="side-footer">
-        <Icon name="settings" size={13} />
-        <span style={{ flex: 1 }}>Logbook · Trash</span>
-        {onChangePassword && (
-          <span
-            onClick={onChangePassword}
-            style={{ cursor: "default", fontSize: 11.5, color: "var(--fg-4)", marginRight: 10 }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--fg-2)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--fg-4)")}
+        <div ref={settingsRef} style={{ position: "relative" }}>
+          <button
+            type="button"
+            className="settings-trigger"
+            aria-label="Settings"
+            onClick={() => setSettingsOpen((o) => !o)}
           >
-            Change pw
-          </span>
-        )}
-        {onSignOut && (
-          <span
-            onClick={onSignOut}
-            style={{ cursor: "default", fontSize: 11.5, color: "var(--fg-4)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--fg-2)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--fg-4)")}
-          >
-            Sign out
-          </span>
-        )}
+            <Icon name="settings" size={13} />
+          </button>
+          {settingsOpen && (
+            <div className="settings-menu glass-strong">
+              {onChangePassword && (
+                <button
+                  type="button"
+                  className="settings-menu-item"
+                  onClick={() => {
+                    setSettingsOpen(false);
+                    onChangePassword();
+                  }}
+                >
+                  Change password
+                </button>
+              )}
+              {onSignOut && (
+                <button
+                  type="button"
+                  className="settings-menu-item"
+                  onClick={() => {
+                    setSettingsOpen(false);
+                    onSignOut();
+                  }}
+                >
+                  Sign out
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        <span style={{ flex: 1 }}>Logbook</span>
       </div>
     </div>
   );

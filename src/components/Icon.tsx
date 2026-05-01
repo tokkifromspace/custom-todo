@@ -57,9 +57,7 @@ export function Icon({ name, size = 16, style }: Props) {
     case "filter":
       return <svg {...props}><path d="M2.5 3.5h11l-4 5v4l-3 1.5v-5.5l-4-5z"/></svg>;
     case "settings":
-      return <svg {...props}><circle cx="8" cy="8" r="2"/><path d="M8 1.5v2M8 12.5v2M14.5 8h-2M3.5 8h-2M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4M12.6 12.6l-1.4-1.4M4.8 4.8L3.4 3.4"/></svg>;
-    case "bell":
-      return <svg {...props}><path d="M3.5 11.5h9l-1-1.5v-3a3.5 3.5 0 10-7 0v3l-1 1.5zM6.5 13a1.5 1.5 0 003 0"/></svg>;
+      return <svg {...props}><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r="0.8"/><path d="M8 2v3M8 11v3M2 8h3M11 8h3M3.6 3.6l2.1 2.1M10.3 10.3l2.1 2.1M3.6 12.4l2.1-2.1M10.3 5.7l2.1-2.1"/></svg>;
     case "repeat":
       return <svg {...props}><path d="M3 6.5L1.5 5l1.5-1.5M1.5 5h9.5a2.5 2.5 0 012.5 2.5v0M13 9.5L14.5 11l-1.5 1.5M14.5 11H5a2.5 2.5 0 01-2.5-2.5"/></svg>;
     case "attachment":

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Group, NewTaskPayload, Project, View } from "./types";
+import type { Group, NewTaskPayload, Project, Task, View } from "./types";
 import { Sidebar } from "./components/Sidebar";
 import { NewTaskModal } from "./components/NewTaskModal";
+import { ChangePasswordModal } from "./components/ChangePasswordModal";
+import { QuickFindModal } from "./components/QuickFindModal";
 import { UndoToast } from "./components/UndoToast";
 import { TodayView } from "./views/TodayView";
 import { ProjectView } from "./views/ProjectView";
@@ -21,26 +23,19 @@ function App() {
     pendingDelete,
     toggleTask,
     addTask,
+    updateTask,
+    reorderTasks,
     addProject,
     deleteTask,
     undoDeleteTask,
     deleteProject,
   } = useData();
   const { signOut, updatePassword } = useAuth();
-
-  const handleChangePassword = async () => {
-    const newPw = window.prompt("Enter new password (min 6 chars):");
-    if (!newPw) return;
-    if (newPw.length < 6) {
-      window.alert("Password must be at least 6 characters.");
-      return;
-    }
-    const { error: pwError } = await updatePassword(newPw);
-    if (pwError) window.alert(`Failed: ${pwError}`);
-    else window.alert("Password updated.");
-  };
+  const [pwModalOpen, setPwModalOpen] = useState(false);
   const [view, setView] = useState<View>({ type: "today" });
   const [quickAdd, setQuickAdd] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [quickFindOpen, setQuickFindOpen] = useState(false);
 
   useEffect(() => {
     if (view.type === "project" && !projects.some((p) => p.id === view.id)) {
@@ -51,14 +46,15 @@ function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-      if (e.code !== "KeyN") return;
+      if (e.code !== "KeyN" && e.code !== "KeyK") return;
       const target = e.target as HTMLElement | null;
       if (target) {
         const tag = target.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable) return;
       }
       e.preventDefault();
-      setQuickAdd(true);
+      if (e.code === "KeyN") setQuickAdd(true);
+      else setQuickFindOpen(true);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -78,11 +74,24 @@ function App() {
 
   const counts = useMemo(() => computeCounts(tasks), [tasks]);
 
-  const handleAddTask = (payload: NewTaskPayload) => {
-    void addTask(payload);
-    if (payload.bucket === "today" || payload.bucket === "evening") {
-      setView({ type: "today" });
+  const handleSubmitTask = (payload: NewTaskPayload) => {
+    if (editingTask) {
+      void updateTask(editingTask.id, payload);
+    } else {
+      void addTask(payload);
+      if (payload.bucket === "today" || payload.bucket === "evening") {
+        setView({ type: "today" });
+      }
     }
+  };
+
+  const closeTaskModal = () => {
+    setQuickAdd(false);
+    setEditingTask(null);
+  };
+
+  const handleSetDue = (id: string, due: string | null) => {
+    void updateTask(id, { due: due ?? undefined });
   };
 
   const handleAddProject = async (groupId: string, name: string) => {
@@ -103,6 +112,9 @@ function App() {
         tasks={tasks}
         onToggle={toggleTask}
         onDelete={deleteTask}
+        onEdit={setEditingTask}
+        onSetDue={handleSetDue}
+        onReorder={reorderTasks}
         projectsById={projectsById}
         onQuickAdd={() => setQuickAdd(true)}
       />
@@ -118,6 +130,9 @@ function App() {
           tasks={tasks}
           onToggle={toggleTask}
           onDelete={deleteTask}
+          onEdit={setEditingTask}
+          onSetDue={handleSetDue}
+          onReorder={reorderTasks}
           projectsById={projectsById}
           onQuickAdd={() => setQuickAdd(true)}
         />
@@ -129,6 +144,8 @@ function App() {
         tasks={tasks}
         onToggle={toggleTask}
         onDelete={deleteTask}
+        onEdit={setEditingTask}
+        onSetDue={handleSetDue}
         projectsById={projectsById}
         onQuickAdd={() => setQuickAdd(true)}
       />
@@ -144,6 +161,9 @@ function App() {
         tasks={list}
         onToggle={toggleTask}
         onDelete={deleteTask}
+        onEdit={setEditingTask}
+        onSetDue={handleSetDue}
+        onReorder={reorderTasks}
         projectsById={projectsById}
         onQuickAdd={() => setQuickAdd(true)}
       />
@@ -159,6 +179,9 @@ function App() {
         tasks={list}
         onToggle={toggleTask}
         onDelete={deleteTask}
+        onEdit={setEditingTask}
+        onSetDue={handleSetDue}
+        onReorder={reorderTasks}
         projectsById={projectsById}
         onQuickAdd={() => setQuickAdd(true)}
       />
@@ -174,6 +197,9 @@ function App() {
         tasks={list}
         onToggle={toggleTask}
         onDelete={deleteTask}
+        onEdit={setEditingTask}
+        onSetDue={handleSetDue}
+        onReorder={reorderTasks}
         projectsById={projectsById}
         onQuickAdd={() => setQuickAdd(true)}
       />
@@ -197,7 +223,8 @@ function App() {
         counts={counts}
         onAddProject={handleAddProject}
         onDeleteProject={deleteProject}
-        onChangePassword={() => void handleChangePassword()}
+        onQuickFind={() => setQuickFindOpen(true)}
+        onChangePassword={() => setPwModalOpen(true)}
         onSignOut={() => void signOut()}
       />
       {pane}
@@ -207,13 +234,28 @@ function App() {
         </div>
       )}
       <NewTaskModal
-        open={quickAdd}
-        onClose={() => setQuickAdd(false)}
-        onSubmit={handleAddTask}
+        open={quickAdd || !!editingTask}
+        onClose={closeTaskModal}
+        onSubmit={handleSubmitTask}
         projects={projects}
         defaultProjectId={defaultProjectId}
+        editingTask={editingTask}
       />
       <UndoToast pending={pendingDelete} onUndo={undoDeleteTask} />
+      <ChangePasswordModal
+        open={pwModalOpen}
+        onClose={() => setPwModalOpen(false)}
+        onSubmit={updatePassword}
+      />
+      <QuickFindModal
+        open={quickFindOpen}
+        onClose={() => setQuickFindOpen(false)}
+        tasks={tasks}
+        projects={projects}
+        projectsById={projectsById}
+        onSelectTask={(t) => setEditingTask(t)}
+        onSelectProject={(p) => setView({ type: "project", id: p.id })}
+      />
     </div>
   );
 }

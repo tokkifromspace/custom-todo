@@ -1,21 +1,24 @@
 import type { Project, Task } from "../types";
 import { Icon } from "../components/Icon";
-import { TaskRow } from "../components/TaskRow";
+import { SortableTaskList } from "../components/SortableTaskList";
 import { GroupHeader } from "../components/GroupHeader";
 
 interface Props {
   tasks: Task[];
   onToggle: (id: string) => void;
   onDelete: (task: Task) => void;
+  onEdit: (task: Task) => void;
+  onSetDue: (id: string, due: string | null) => void;
+  onReorder: (orderedIds: string[]) => void;
   projectsById: Record<string, Project>;
   onQuickAdd: () => void;
 }
 
-export function TodayView({ tasks, onToggle, onDelete, projectsById, onQuickAdd }: Props) {
-  const today = tasks.filter((t) => t.bucket === "today");
-  const evening = tasks.filter((t) => t.bucket === "evening");
-  const remaining = today.filter((t) => !t.done).length;
-  const eveningCount = evening.filter((t) => !t.done).length;
+export function TodayView({ tasks, onToggle, onDelete, onEdit, onSetDue, onReorder, projectsById, onQuickAdd }: Props) {
+  const today = tasks.filter((t) => t.bucket === "today" && !t.done);
+  const evening = tasks.filter((t) => t.bucket === "evening" && !t.done);
+  const remaining = today.length;
+  const eveningCount = evening.length;
 
   const now = new Date();
   const todayLabel = `${now.toLocaleDateString("en-US", { weekday: "long" })} · ${now.toLocaleDateString("en-US", { month: "long", day: "numeric" })}`;
@@ -63,9 +66,16 @@ export function TodayView({ tasks, onToggle, onDelete, projectsById, onQuickAdd 
           <>
             <GroupHeader kind="today" label="Today" />
             <div className="tasks">
-              {today.map((t) => (
-                <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} showProject projectsById={projectsById} />
-              ))}
+              <SortableTaskList
+                tasks={today}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                onSetDue={onSetDue}
+                onReorder={onReorder}
+                projectsById={projectsById}
+                showProject
+              />
             </div>
           </>
         )}
@@ -74,9 +84,16 @@ export function TodayView({ tasks, onToggle, onDelete, projectsById, onQuickAdd 
           <>
             <GroupHeader kind="evening" label="This Evening" />
             <div className="tasks">
-              {evening.map((t) => (
-                <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} showProject projectsById={projectsById} />
-              ))}
+              <SortableTaskList
+                tasks={evening}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                onSetDue={onSetDue}
+                onReorder={onReorder}
+                projectsById={projectsById}
+                showProject
+              />
             </div>
           </>
         )}

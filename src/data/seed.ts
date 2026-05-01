@@ -56,14 +56,14 @@ export const seedTasks: SeedTask[] = [
   { title: "Sync with engineering on token migration", bucket: "today", when: "today",
     projectKey: "design", done: true },
   { title: "Lunch with Hana", bucket: "today", when: "today",
-    dayOffset: 0, repeat: "Weekly", done: false },
+    dayOffset: 0, repeat: "weekly", done: false },
   { title: "Submit expenses for March", bucket: "today", when: "today",
     dayOffset: 4, tags: ["admin"], done: false },
   // Evening bucket
   { title: "Reading: Pattern Language ch.7", bucket: "evening", when: "evening",
     projectKey: "reading", done: false },
   { title: "Water plants on balcony", bucket: "evening", when: "evening",
-    repeat: "Every 3 days", done: false },
+    repeat: "daily:completion", done: false },
   { title: "Reply to Jun about apartment viewing", bucket: "evening", when: "evening",
     projectKey: "apartment", done: false },
   // Marq Design refresh — In Flight
@@ -75,7 +75,7 @@ export const seedTasks: SeedTask[] = [
   { title: "Spec liquid-glass surface variants", when: "tomorrow", projectKey: "design",
     dayOffset: 3, tags: ["spec"], done: false },
   { title: "Pair with Inkyu on icon stroke widths", when: "tomorrow", projectKey: "design",
-    dayOffset: 4, repeat: "Weekly", done: false },
+    dayOffset: 4, repeat: "weekly", done: false },
   // Marq Design — Someday
   { title: "Try woodgrain texture as nav backing", when: "someday", projectKey: "design",
     tags: ["explore"], done: false },

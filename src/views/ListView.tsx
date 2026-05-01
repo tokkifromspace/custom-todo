@@ -1,6 +1,6 @@
 import type { IconName, Project, Task } from "../types";
 import { Icon } from "../components/Icon";
-import { TaskRow } from "../components/TaskRow";
+import { SortableTaskList } from "../components/SortableTaskList";
 
 interface Props {
   title: string;
@@ -10,11 +10,14 @@ interface Props {
   tasks: Task[];
   onToggle: (id: string) => void;
   onDelete: (task: Task) => void;
+  onEdit: (task: Task) => void;
+  onSetDue: (id: string, due: string | null) => void;
+  onReorder: (orderedIds: string[]) => void;
   projectsById: Record<string, Project>;
   onQuickAdd: () => void;
 }
 
-export function ListView({ title, glyph, glyphColor, subtitle, tasks, onToggle, onDelete, projectsById, onQuickAdd }: Props) {
+export function ListView({ title, glyph, glyphColor, subtitle, tasks, onToggle, onDelete, onEdit, onSetDue, onReorder, projectsById, onQuickAdd }: Props) {
   return (
     <div className="main">
       <div className="toolbar glass">
@@ -47,9 +50,16 @@ export function ListView({ title, glyph, glyphColor, subtitle, tasks, onToggle, 
 
         {tasks.length > 0 && (
           <div className="tasks">
-            {tasks.map((t) => (
-              <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} showProject projectsById={projectsById} />
-            ))}
+            <SortableTaskList
+              tasks={tasks}
+              onToggle={onToggle}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onSetDue={onSetDue}
+              onReorder={onReorder}
+              projectsById={projectsById}
+              showProject
+            />
           </div>
         )}
       </div>

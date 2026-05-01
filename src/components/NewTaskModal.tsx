@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import type { IconName, NewTaskPayload, Project, When } from "../types";
-import { formatDue, toIsoDate, todayIso } from "../data/helpers";
+import type { IconName, NewTaskPayload, Project, Task, When } from "../types";
+import { formatDue, parseRepeat, serializeRepeat, toIsoDate, todayIso } from "../data/helpers";
+import type { RepeatInterval } from "../data/helpers";
 import { Icon } from "./Icon";
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
   onSubmit: (payload: NewTaskPayload) => void;
   projects: Project[];
   defaultProjectId?: string | null;
+  editingTask?: Task | null;
 }
 
 interface BucketDef {
@@ -18,12 +20,15 @@ interface BucketDef {
   icon: IconName;
 }
 
-export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProjectId }: Props) {
+export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProjectId, editingTask }: Props) {
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [when, setWhen] = useState<When>("today");
   const [showDeadline, setShowDeadline] = useState(false);
   const [deadline, setDeadline] = useState<string | null>(null);
+  const [showRepeat, setShowRepeat] = useState(false);
+  const [repeatInterval, setRepeatInterval] = useState<RepeatInterval>("weekly");
+  const [repeatFromCompletion, setRepeatFromCompletion] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(defaultProjectId ?? null);
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
@@ -34,26 +39,38 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
   const projectMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    if (editingTask) {
+      setTitle(editingTask.title);
+      setNotes(editingTask.notes ?? "");
+      setWhen(editingTask.when);
+      setDeadline(editingTask.due ?? null);
+      setShowDeadline(!!editingTask.due);
+      const spec = parseRepeat(editingTask.repeat);
+      setShowRepeat(!!spec);
+      setRepeatInterval(spec?.interval ?? "weekly");
+      setRepeatFromCompletion(spec?.from === "completion");
+      setProjectId(editingTask.projectId ?? null);
+      setTags(editingTask.tags ?? []);
+    } else {
       setTitle("");
       setNotes("");
       setWhen("today");
       setShowDeadline(false);
       setDeadline(null);
+      setShowRepeat(false);
+      setRepeatInterval("weekly");
+      setRepeatFromCompletion(false);
       setProjectId(defaultProjectId ?? null);
       setTags([]);
-      setTagDraft("");
-      setTagOpen(false);
-      setProjectMenuOpen(false);
-      setTimeout(() => titleRef.current?.focus(), 30);
     }
-  }, [open, defaultProjectId]);
+    setTagDraft("");
+    setTagOpen(false);
+    setProjectMenuOpen(false);
+    setTimeout(() => titleRef.current?.focus(), 30);
+  }, [open, defaultProjectId, editingTask]);
 
   const submit = () => {
-    if (!title.trim()) {
-      onClose();
-      return;
-    }
     let due: string | undefined;
     if (deadline) {
       due = deadline;
@@ -64,12 +81,19 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
       t.setDate(t.getDate() + 1);
       due = toIsoDate(t);
     }
+    const repeat = showRepeat
+      ? serializeRepeat({
+          interval: repeatInterval,
+          from: repeatFromCompletion ? "completion" : "due",
+        }) ?? undefined
+      : undefined;
     onSubmit({
       title: title.trim(),
       notes: notes.trim() || undefined,
       when,
       bucket: when === "today" ? "today" : when === "evening" ? "evening" : null,
       due,
+      repeat,
       projectId: projectId ?? undefined,
       tags: tags.length ? tags : undefined,
     });
@@ -264,6 +288,67 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
               </button>
             </div>
           )}
+
+          <div style={{ marginTop: 10 }}>
+            {!showRepeat ? (
+              <button
+                type="button"
+                onClick={() => setShowRepeat(true)}
+                style={{
+                  all: "unset",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  color: "var(--fg-3)",
+                  cursor: "default",
+                  background: "var(--bg-hover)",
+                }}
+              >
+                <Icon name="repeat" size={12} />
+                <span>Add repeat</span>
+              </button>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <Icon name="repeat" size={12} style={{ color: "var(--fg-3)" }} />
+                <select
+                  value={repeatInterval}
+                  onChange={(e) => setRepeatInterval(e.target.value as RepeatInterval)}
+                  className="auth-input"
+                  style={{ height: 32, fontSize: 12.5, padding: "0 8px" }}
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Bi-weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--fg-2)", cursor: "default" }}>
+                  <input
+                    type="checkbox"
+                    checked={repeatFromCompletion}
+                    onChange={(e) => setRepeatFromCompletion(e.target.checked)}
+                  />
+                  From completion
+                </label>
+                <span style={{ flex: 1 }} />
+                <button
+                  type="button"
+                  className="icon-btn"
+                  style={{ width: 26, height: 26 }}
+                  onClick={() => {
+                    setShowRepeat(false);
+                    setRepeatFromCompletion(false);
+                    setRepeatInterval("weekly");
+                  }}
+                  title="Remove repeat"
+                >
+                  <Icon name="x" size={12} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div style={{ padding: "12px 18px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -478,14 +563,12 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
         </div>
 
         <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: 8 }}>
-          <span className="icon-btn"><Icon name="bell" size={14} /></span>
-          <span className="icon-btn"><Icon name="repeat" size={14} /></span>
           <span className="icon-btn"><Icon name="attachment" size={14} /></span>
           <span className="icon-btn"><Icon name="flag" size={14} /></span>
           <span style={{ flex: 1 }} />
           <button className="btn" onClick={onClose}>Cancel</button>
           <button className="btn primary" onClick={submit}>
-            Add task
+            {editingTask ? "Save" : "Add task"}
             <span className="kbd" style={{ background: "oklch(1 0 0 / 0.2)", color: "white" }}>⌘↵</span>
           </button>
         </div>

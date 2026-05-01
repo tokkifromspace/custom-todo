@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { supabase } from "./supabase";
 import { useAuth } from "./auth";
 import { seedNewUser } from "./seedNewUser";
+import { computeNextDue, parseRepeat } from "../data/helpers";
 import type {
   Bucket,
   Group,
@@ -77,6 +78,8 @@ interface DataContextValue {
   pendingDelete: Task | null;
   toggleTask: (id: string) => Promise<void>;
   addTask: (payload: NewTaskPayload) => Promise<void>;
+  updateTask: (id: string, patch: Partial<Task>) => Promise<void>;
+  reorderTasks: (orderedIds: string[]) => Promise<void>;
   addProject: (groupId: string, name: string) => Promise<Project | null>;
   deleteTask: (task: Task) => void;
   undoDeleteTask: () => void;
@@ -197,24 +200,108 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setError(OFFLINE_MESSAGE);
       return;
     }
-    let prevDone: boolean | null = null;
+    const current = tasksRef.current.find((t) => t.id === id);
+    if (!current) return;
+
+    // Repeat: instead of marking done, advance the due date and clear the
+    // today/evening bucket (the next instance is in the future, no longer "today")
+    if (!current.done && parseRepeat(current.repeat)) {
+      const nextDue = computeNextDue(current);
+      const prevDue = current.due;
+      const prevBucket = current.bucket;
+      setTasks((ts) =>
+        ts.map((t) =>
+          t.id === id ? { ...t, due: nextDue ?? undefined, bucket: undefined } : t,
+        ),
+      );
+      const { error } = await supabase
+        .from("tasks")
+        .update({ due: nextDue ?? null, bucket: null })
+        .eq("id", id);
+      if (error) {
+        setTasks((ts) =>
+          ts.map((t) =>
+            t.id === id ? { ...t, due: prevDue, bucket: prevBucket } : t,
+          ),
+        );
+        setError(error.message);
+      }
+      return;
+    }
+
+    const prevDone = current.done;
     setTasks((ts) =>
-      ts.map((t) => {
-        if (t.id !== id) return t;
-        prevDone = t.done;
-        return { ...t, done: !t.done };
-      }),
+      ts.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
     );
-    if (prevDone === null) return;
     const { error } = await supabase
       .from("tasks")
       .update({ done: !prevDone })
       .eq("id", id);
     if (error) {
-      const reverted = prevDone;
-      setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, done: reverted } : t)));
+      setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, done: prevDone } : t)));
       setError(error.message);
     }
+  }, []);
+
+  const updateTask = useCallback(async (id: string, patch: Partial<Task>) => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setError(OFFLINE_MESSAGE);
+      return;
+    }
+    if (id.startsWith("temp-")) {
+      setError("This task is still being created — try again in a moment.");
+      return;
+    }
+    const prev = tasksRef.current.find((t) => t.id === id);
+    if (!prev) return;
+
+    setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+
+    const dbPatch: Record<string, unknown> = {};
+    if ("title" in patch) dbPatch.title = patch.title;
+    if ("notes" in patch) dbPatch.notes = patch.notes ?? null;
+    if ("bucket" in patch) dbPatch.bucket = patch.bucket ?? null;
+    if ("when" in patch) dbPatch.when_at = patch.when;
+    if ("due" in patch) dbPatch.due = patch.due ?? null;
+    if ("repeat" in patch) dbPatch.repeat = patch.repeat ?? null;
+    if ("projectId" in patch) dbPatch.project_id = patch.projectId ?? null;
+    if ("tags" in patch) dbPatch.tags = patch.tags ?? [];
+    if ("done" in patch) dbPatch.done = patch.done;
+
+    const { error } = await supabase.from("tasks").update(dbPatch).eq("id", id);
+    if (error) {
+      setTasks((ts) => ts.map((t) => (t.id === id ? prev : t)));
+      setError(error.message);
+    }
+  }, []);
+
+  const reorderTasks = useCallback(async (orderedIds: string[]) => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setError(OFFLINE_MESSAGE);
+      return;
+    }
+    if (orderedIds.length === 0) return;
+    if (orderedIds.some((id) => id.startsWith("temp-"))) return;
+
+    const movingSet = new Set(orderedIds);
+    const baseOffset = 1000;
+
+    setTasks((ts) => {
+      const idToTask = new Map(ts.map((t) => [t.id, t]));
+      const queue = orderedIds
+        .map((id) => idToTask.get(id))
+        .filter((t): t is Task => !!t);
+      // Walk original list; at every position occupied by a moving task,
+      // pull the next task from the new order. Non-moving tasks keep their slot.
+      return ts.map((t) => (movingSet.has(t.id) ? queue.shift() ?? t : t));
+    });
+
+    const ops = orderedIds.map((id, i) =>
+      supabase.from("tasks").update({ sort_order: baseOffset + i }).eq("id", id),
+    );
+    const results = await Promise.all(ops);
+    const firstErr = results.find((r) => r.error);
+    if (firstErr?.error) setError(firstErr.error.message);
   }, []);
 
   const addTask = useCallback(async (payload: NewTaskPayload) => {
@@ -233,6 +320,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         bucket: payload.bucket ?? null,
         when_at: payload.when,
         due: payload.due ?? null,
+        repeat: payload.repeat ?? null,
         project_id: payload.projectId ?? null,
         tags: payload.tags ?? [],
       })
@@ -355,6 +443,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     pendingDelete,
     toggleTask,
     addTask,
+    updateTask,
+    reorderTasks,
     addProject,
     deleteTask,
     undoDeleteTask,

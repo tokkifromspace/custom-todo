@@ -1,5 +1,5 @@
 import type { Project, Task } from "../types";
-import { formatDue, isDueToday, isOverdue } from "../data/helpers";
+import { formatDue, formatRepeat, isDueToday, isOverdue } from "../data/helpers";
 import { Checkbox } from "./Checkbox";
 import { Icon } from "./Icon";
 
@@ -7,19 +7,22 @@ interface Props {
   task: Task;
   onToggle?: (id: string) => void;
   onDelete?: (task: Task) => void;
+  onEdit?: (task: Task) => void;
+  onSetDue?: (id: string, due: string | null) => void;
   showProject?: boolean;
   compact?: boolean;
   projectsById: Record<string, Project>;
 }
 
-export function TaskRow({ task, onToggle, onDelete, showProject, compact, projectsById }: Props) {
+export function TaskRow({ task, onToggle, onDelete, onEdit, onSetDue, showProject, compact, projectsById }: Props) {
   const dueLabel = formatDue(task.due);
+  const repeatLabel = formatRepeat(task.repeat);
   const overdue = isOverdue(task.due) && !task.done;
   const isToday = isDueToday(task.due);
   const project = task.projectId ? projectsById[task.projectId] : null;
 
   const hasMeta =
-    !!dueLabel || (task.tags && task.tags.length > 0) || !!project || !!task.repeat;
+    !!dueLabel || (task.tags && task.tags.length > 0) || !!project || !!repeatLabel;
 
   return (
     <div className={`task-row ${task.done ? "done" : ""}`}>
@@ -28,8 +31,13 @@ export function TaskRow({ task, onToggle, onDelete, showProject, compact, projec
         bucket={task.bucket}
         onClick={() => onToggle?.(task.id)}
       />
-      <div className="task-body">
-        <div className="ttitle">{task.title}</div>
+      <div
+        className={`task-body ${onEdit ? "editable" : ""}`}
+        onClick={onEdit ? () => onEdit(task) : undefined}
+      >
+        <div className="ttitle">
+          {task.title || <span className="ttitle-placeholder">No title</span>}
+        </div>
         {task.notes && !compact && <div className="tnotes">{task.notes}</div>}
         {hasMeta && (
           <div className="tmeta">
@@ -39,10 +47,10 @@ export function TaskRow({ task, onToggle, onDelete, showProject, compact, projec
                 {dueLabel}
               </span>
             )}
-            {task.repeat && (
+            {repeatLabel && (
               <span className="chip due">
                 <Icon name="repeat" size={11} />
-                {task.repeat}
+                {repeatLabel}
               </span>
             )}
             {showProject && project && (
@@ -68,9 +76,19 @@ export function TaskRow({ task, onToggle, onDelete, showProject, compact, projec
         )}
       </div>
       <div className="right-actions">
-        <span className="icon-btn">
+        <label
+          className="icon-btn calendar-input"
+          aria-label="Set due date"
+          onClick={(e) => e.stopPropagation()}
+        >
           <Icon name="calendar" size={14} />
-        </span>
+          <input
+            type="date"
+            value={task.due ?? ""}
+            onChange={(e) => onSetDue?.(task.id, e.target.value || null)}
+            tabIndex={-1}
+          />
+        </label>
         <span className="icon-btn">
           <Icon name="tag" size={14} />
         </span>
