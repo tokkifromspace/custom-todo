@@ -21,8 +21,6 @@ interface TaskRow {
   bucket: string | null;
   when_at: string;
   due: string | null;
-  due_today: boolean;
-  due_overdue: boolean;
   repeat: string | null;
   project_id: string | null;
   tags: string[];
@@ -50,8 +48,6 @@ function toTask(row: TaskRow): Task {
     bucket: (row.bucket as Bucket | null) ?? undefined,
     when: row.when_at as When,
     due: row.due ?? undefined,
-    dueToday: row.due_today,
-    dueOverdue: row.due_overdue,
     repeat: row.repeat ?? undefined,
     projectId: row.project_id ?? undefined,
     tags: row.tags.length > 0 ? row.tags : undefined,
@@ -137,7 +133,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         supabase.from("projects").select("id, group_id, name, color").order("sort_order").order("created_at"),
         supabase
           .from("tasks")
-          .select("id, title, notes, bucket, when_at, due, due_today, due_overdue, repeat, project_id, tags, done")
+          .select("id, title, notes, bucket, when_at, due, repeat, project_id, tags, done")
           .order("sort_order")
           .order("created_at"),
       ]);
@@ -156,7 +152,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           supabase.from("projects").select("id, group_id, name, color").order("sort_order").order("created_at"),
           supabase
             .from("tasks")
-            .select("id, title, notes, bucket, when_at, due, due_today, due_overdue, repeat, project_id, tags, done")
+            .select("id, title, notes, bucket, when_at, due, repeat, project_id, tags, done")
             .order("sort_order")
             .order("created_at"),
         ]);
@@ -237,11 +233,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
         bucket: payload.bucket ?? null,
         when_at: payload.when,
         due: payload.due ?? null,
-        due_today: payload.dueToday ?? false,
         project_id: payload.projectId ?? null,
         tags: payload.tags ?? [],
       })
-      .select("id, title, notes, bucket, when_at, due, due_today, due_overdue, repeat, project_id, tags, done")
+      .select("id, title, notes, bucket, when_at, due, repeat, project_id, tags, done")
       .single();
     if (error || !data) {
       setTasks((ts) => ts.filter((t) => t.id !== tempId));

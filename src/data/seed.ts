@@ -3,6 +3,9 @@ import type { Bucket, When } from "../types";
 // Seed data for new users — DB generates all uuids on insert.
 // `key` / `groupKey` / `projectKey` are logical handles used to wire up
 // FK relations during the seed insert flow (see lib/seedNewUser.ts).
+//
+// `dayOffset` (when present) is days from today: 0 = today, 1 = tomorrow,
+// 2 = day after tomorrow, etc. seedNewUser converts it to an ISO date.
 
 export interface SeedGroup {
   key: string;
@@ -23,9 +26,7 @@ export interface SeedTask {
   notes?: string;
   bucket?: Bucket | null;
   when: When;
-  due?: string;
-  dueToday?: boolean;
-  dueOverdue?: boolean;
+  dayOffset?: number;
   repeat?: string;
   tags?: string[];
   done: boolean;
@@ -49,15 +50,15 @@ export const seedTasks: SeedTask[] = [
   // Today bucket
   { title: "Review hi-fi mocks for filter rail", bucket: "today", when: "today",
     notes: "Compare A/B with marketing on accent intensity",
-    projectKey: "design", due: "Today", dueToday: true, tags: ["focus"], done: false },
+    projectKey: "design", dayOffset: 0, tags: ["focus"], done: false },
   { title: "Send Q2 OKR draft to Mira", bucket: "today", when: "today",
-    projectKey: "okr", due: "Today", dueToday: true, done: false },
+    projectKey: "okr", dayOffset: 0, done: false },
   { title: "Sync with engineering on token migration", bucket: "today", when: "today",
     projectKey: "design", done: true },
   { title: "Lunch with Hana", bucket: "today", when: "today",
-    due: "12:30", repeat: "Weekly", done: false },
+    dayOffset: 0, repeat: "Weekly", done: false },
   { title: "Submit expenses for March", bucket: "today", when: "today",
-    due: "Apr 30", tags: ["admin"], done: false },
+    dayOffset: 4, tags: ["admin"], done: false },
   // Evening bucket
   { title: "Reading: Pattern Language ch.7", bucket: "evening", when: "evening",
     projectKey: "reading", done: false },
@@ -68,13 +69,13 @@ export const seedTasks: SeedTask[] = [
   // Marq Design refresh — In Flight
   { title: "Define new accent token scale", when: "tomorrow", projectKey: "design",
     notes: "Pull samples from Linear, Things, and Bear; cross-check oklch chroma",
-    due: "Apr 28", tags: ["tokens"], done: false },
+    dayOffset: 2, tags: ["tokens"], done: false },
   { title: "Audit shadow / depth tokens", when: "tomorrow", projectKey: "design",
-    due: "Apr 28", done: false },
+    dayOffset: 2, done: false },
   { title: "Spec liquid-glass surface variants", when: "tomorrow", projectKey: "design",
-    due: "Apr 29", tags: ["spec"], done: false },
+    dayOffset: 3, tags: ["spec"], done: false },
   { title: "Pair with Inkyu on icon stroke widths", when: "tomorrow", projectKey: "design",
-    due: "Apr 30", repeat: "Weekly", done: false },
+    dayOffset: 4, repeat: "Weekly", done: false },
   // Marq Design — Someday
   { title: "Try woodgrain texture as nav backing", when: "someday", projectKey: "design",
     tags: ["explore"], done: false },
@@ -96,7 +97,7 @@ export const seedTasks: SeedTask[] = [
   { title: "Learn how to make handmade pasta", when: "someday", projectKey: "cooking", done: false },
   // Other projects
   { title: "Compile brand voice samples", when: "tomorrow", projectKey: "brand",
-    due: "Apr 29", done: false },
+    dayOffset: 3, done: false },
   { title: "Sign lease addendum", when: "tomorrow", projectKey: "apartment",
-    due: "May 2", done: false },
+    dayOffset: 6, done: false },
 ];

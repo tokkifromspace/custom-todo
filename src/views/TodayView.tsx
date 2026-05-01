@@ -17,6 +17,9 @@ export function TodayView({ tasks, onToggle, onDelete, projectsById, onQuickAdd 
   const remaining = today.filter((t) => !t.done).length;
   const eveningCount = evening.filter((t) => !t.done).length;
 
+  const now = new Date();
+  const todayLabel = `${now.toLocaleDateString("en-US", { weekday: "long" })} · ${now.toLocaleDateString("en-US", { month: "long", day: "numeric" })}`;
+
   return (
     <div className="main">
       <div className="toolbar glass">
@@ -46,7 +49,7 @@ export function TodayView({ tasks, onToggle, onDelete, projectsById, onQuickAdd 
               </span>
               Today
             </div>
-            <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 4 }}>Saturday · April 26</div>
+            <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 4 }}>{todayLabel}</div>
           </div>
           <div style={{ flex: 1 }} />
           {(remaining > 0 || eveningCount > 0) && (

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { IconName, NewTaskPayload, Project, When } from "../types";
+import { formatDue, toIsoDate, todayIso } from "../data/helpers";
 import { Icon } from "./Icon";
 
 interface Props {
@@ -53,18 +54,22 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
       onClose();
       return;
     }
+    let due: string | undefined;
+    if (deadline) {
+      due = deadline;
+    } else if (when === "today" || when === "evening") {
+      due = todayIso();
+    } else if (when === "tomorrow") {
+      const t = new Date();
+      t.setDate(t.getDate() + 1);
+      due = toIsoDate(t);
+    }
     onSubmit({
       title: title.trim(),
       notes: notes.trim() || undefined,
       when,
       bucket: when === "today" ? "today" : when === "evening" ? "evening" : null,
-      due:
-        when === "today"
-          ? "Today"
-          : when === "tomorrow"
-          ? "Tomorrow"
-          : deadline ?? undefined,
-      dueToday: when === "today",
+      due,
       projectId: projectId ?? undefined,
       tags: tags.length ? tags : undefined,
     });
@@ -232,82 +237,32 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
               <span>Add deadline</span>
             </button>
           ) : (
-            <>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ fontSize: 11.5, color: "var(--fg-3)", fontWeight: 500 }}>Deadline · April 2026</span>
-                <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
-                  <span className="icon-btn" style={{ width: 22, height: 22 }}>
-                    <Icon name="chev" size={11} style={{ transform: "rotate(180deg)" }} />
-                  </span>
-                  <span className="icon-btn" style={{ width: 22, height: 22 }}>
-                    <Icon name="chev" size={11} />
-                  </span>
-                  <span
-                    className="icon-btn"
-                    style={{ width: 22, height: 22, marginLeft: 4 }}
-                    onClick={() => {
-                      setShowDeadline(false);
-                      setDeadline(null);
-                    }}
-                    title="Remove deadline"
-                  >
-                    <Icon name="x" size={11} />
-                  </span>
-                </div>
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(7, 1fr)",
-                  gap: 1,
-                  fontSize: 10.5,
-                  color: "var(--fg-4)",
-                  marginBottom: 4,
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="date"
+                value={deadline ?? ""}
+                min={todayIso()}
+                onChange={(e) => setDeadline(e.target.value || null)}
+                className="auth-input"
+                style={{ height: 32, fontSize: 12.5, padding: "0 10px", maxWidth: 180 }}
+              />
+              {deadline && (
+                <span style={{ fontSize: 12, color: "var(--fg-3)" }}>{formatDue(deadline)}</span>
+              )}
+              <span style={{ flex: 1 }} />
+              <button
+                type="button"
+                className="icon-btn"
+                style={{ width: 26, height: 26 }}
+                onClick={() => {
+                  setShowDeadline(false);
+                  setDeadline(null);
                 }}
+                title="Remove deadline"
               >
-                {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-                  <div key={i} style={{ textAlign: "center", padding: "2px 0" }}>
-                    {d}
-                  </div>
-                ))}
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(7, 1fr)",
-                  gap: 1,
-                  fontSize: 11.5,
-                  color: "var(--fg-2)",
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {Array.from({ length: 35 }).map((_, i) => {
-                  const d = i - 2;
-                  const valid = d > 0 && d <= 30;
-                  const today = d === 26;
-                  const picked = deadline === `Apr ${d}`;
-                  return (
-                    <div
-                      key={i}
-                      onClick={() => valid && setDeadline(`Apr ${d}`)}
-                      style={{
-                        height: 26,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        borderRadius: 6,
-                        color: !valid ? "var(--fg-4)" : today ? "white" : picked ? "var(--accent)" : "var(--fg-2)",
-                        background: today ? "var(--warm)" : picked ? "var(--accent-soft)" : "transparent",
-                        fontWeight: today || picked ? 600 : 400,
-                        cursor: "default",
-                      }}
-                    >
-                      {valid ? d : d <= 0 ? 30 + d : d - 30}
-                    </div>
-                  );
-                })}
-              </div>
-            </>
+                <Icon name="x" size={12} />
+              </button>
+            </div>
           )}
         </div>
 

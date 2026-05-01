@@ -1,4 +1,5 @@
 import type { Project, Task } from "../types";
+import { formatDue, isDueToday, isOverdue } from "../data/helpers";
 import { Checkbox } from "./Checkbox";
 import { Icon } from "./Icon";
 
@@ -12,12 +13,13 @@ interface Props {
 }
 
 export function TaskRow({ task, onToggle, onDelete, showProject, compact, projectsById }: Props) {
-  const overdue = task.due && task.dueOverdue;
-  const isToday = task.due && task.dueToday;
+  const dueLabel = formatDue(task.due);
+  const overdue = isOverdue(task.due) && !task.done;
+  const isToday = isDueToday(task.due);
   const project = task.projectId ? projectsById[task.projectId] : null;
 
   const hasMeta =
-    !!task.due || (task.tags && task.tags.length > 0) || !!project || !!task.repeat;
+    !!dueLabel || (task.tags && task.tags.length > 0) || !!project || !!task.repeat;
 
   return (
     <div className={`task-row ${task.done ? "done" : ""}`}>
@@ -31,10 +33,10 @@ export function TaskRow({ task, onToggle, onDelete, showProject, compact, projec
         {task.notes && !compact && <div className="tnotes">{task.notes}</div>}
         {hasMeta && (
           <div className="tmeta">
-            {task.due && (
+            {dueLabel && (
               <span className={`chip due ${overdue ? "overdue" : ""} ${isToday ? "today" : ""}`}>
                 <Icon name="calendar" size={11} />
-                {task.due}
+                {dueLabel}
               </span>
             )}
             {task.repeat && (

@@ -27,9 +27,8 @@ export interface Task {
   notes?: string;
   bucket?: Bucket | null;
   when: When;
+  // ISO YYYY-MM-DD
   due?: string;
-  dueOverdue?: boolean;
-  dueToday?: boolean;
   repeat?: string;
   projectId?: string;
   tags?: string[];
@@ -65,8 +64,8 @@ export interface NewTaskPayload {
   notes?: string;
   when: When;
   bucket?: Bucket | null;
+  // ISO YYYY-MM-DD
   due?: string;
-  dueToday?: boolean;
   projectId?: string;
   tags?: string[];
 }

@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { seedGroups, seedProjects, seedTasks } from "../data/seed";
+import { toIsoDate } from "../data/helpers";
 
 // Inserts default groups/projects/tasks for the current authenticated user.
 // Called when a fresh account loads zero groups.
@@ -39,20 +40,27 @@ export async function seedNewUser(): Promise<void> {
     if (seed) projectKeyToId.set(seed.key, row.id);
   }
 
-  const taskRows = seedTasks.map((t, i) => ({
-    project_id: t.projectKey ? projectKeyToId.get(t.projectKey) ?? null : null,
-    title: t.title,
-    notes: t.notes ?? null,
-    bucket: t.bucket ?? null,
-    when_at: t.when,
-    due: t.due ?? null,
-    due_today: t.dueToday ?? false,
-    due_overdue: t.dueOverdue ?? false,
-    repeat: t.repeat ?? null,
-    tags: t.tags ?? [],
-    done: t.done,
-    sort_order: i,
-  }));
+  const today = new Date();
+  const taskRows = seedTasks.map((t, i) => {
+    let due: string | null = null;
+    if (typeof t.dayOffset === "number") {
+      const d = new Date(today);
+      d.setDate(d.getDate() + t.dayOffset);
+      due = toIsoDate(d);
+    }
+    return {
+      project_id: t.projectKey ? projectKeyToId.get(t.projectKey) ?? null : null,
+      title: t.title,
+      notes: t.notes ?? null,
+      bucket: t.bucket ?? null,
+      when_at: t.when,
+      due,
+      repeat: t.repeat ?? null,
+      tags: t.tags ?? [],
+      done: t.done,
+      sort_order: i,
+    };
+  });
 
   const taskRes = await supabase.from("tasks").insert(taskRows);
   if (taskRes.error) throw taskRes.error;
