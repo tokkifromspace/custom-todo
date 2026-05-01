@@ -61,6 +61,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    // Drop SW caches so the next user on this device can't read the previous
+    // user's task data from a stale REST cache.
+    if ("caches" in window) {
+      try {
+        const names = await caches.keys();
+        await Promise.all(names.map((n) => caches.delete(n)));
+      } catch {
+        // Cache deletion is best-effort; log-out itself already succeeded.
+      }
+    }
   };
 
   const value: AuthContextValue = {
