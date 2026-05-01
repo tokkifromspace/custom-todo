@@ -12,6 +12,8 @@ import type {
   When,
 } from "../types";
 
+const OFFLINE_MESSAGE = "You're offline — changes will resume when you're back online.";
+
 interface TaskRow {
   id: string;
   title: string;
@@ -154,7 +156,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     loadAll();
   }, [userId, loadAll]);
 
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), 5000);
+    return () => clearTimeout(t);
+  }, [error]);
+
   const toggleTask = useCallback(async (id: string) => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setError(OFFLINE_MESSAGE);
+      return;
+    }
     let prevDone: boolean | null = null;
     setTasks((ts) =>
       ts.map((t) => {
@@ -169,7 +181,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       .update({ done: !prevDone })
       .eq("id", id);
     if (error) {
-      // revert
       const reverted = prevDone;
       setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, done: reverted } : t)));
       setError(error.message);
@@ -177,6 +188,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addTask = useCallback(async (payload: NewTaskPayload) => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setError(OFFLINE_MESSAGE);
+      return;
+    }
     const tempId = `temp-${crypto.randomUUID()}`;
     const optimistic: Task = { id: tempId, done: false, ...payload };
     setTasks((ts) => [optimistic, ...ts]);
@@ -205,6 +220,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const addProject = useCallback(
     async (groupId: string, name: string): Promise<Project | null> => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        setError(OFFLINE_MESSAGE);
+        return null;
+      }
       const group = groups.find((g) => g.id === groupId);
       const color = group?.color ?? "var(--accent)";
       const tempId = `temp-${crypto.randomUUID()}`;
