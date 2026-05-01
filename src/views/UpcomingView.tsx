@@ -70,7 +70,7 @@ export function UpcomingView({ tasks, onToggle, projectsById, onQuickAdd }: Prop
           </span>
         </div>
         <button className="btn" onClick={onQuickAdd}>
-          <Icon name="plus" size={12} />Quick add<span className="kbd">⌘N</span>
+          <Icon name="plus" size={12} />Quick add<span className="kbd">^N</span>
         </button>
       </div>
 

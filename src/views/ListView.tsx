@@ -26,7 +26,7 @@ export function ListView({ title, glyph, glyphColor, subtitle, tasks, onToggle, 
         <span className="icon-btn" title="Filter"><Icon name="filter" size={14} /></span>
         <span className="icon-btn" title="More"><Icon name="more" size={14} /></span>
         <button className="btn" onClick={onQuickAdd}>
-          <Icon name="plus" size={12} />Quick add<span className="kbd">⌘N</span>
+          <Icon name="plus" size={12} />Quick add<span className="kbd">^N</span>
         </button>
       </div>
       <div className="content">

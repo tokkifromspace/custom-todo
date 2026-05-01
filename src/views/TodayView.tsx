@@ -32,7 +32,7 @@ export function TodayView({ tasks, onToggle, projectsById, onQuickAdd }: Props) 
           <Icon name="more" size={14} />
         </span>
         <button className="btn" onClick={onQuickAdd}>
-          <Icon name="plus" size={12} />Quick add<span className="kbd">⌘N</span>
+          <Icon name="plus" size={12} />Quick add<span className="kbd">^N</span>
         </button>
       </div>
 

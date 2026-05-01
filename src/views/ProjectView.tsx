@@ -32,7 +32,7 @@ export function ProjectView({ project, group, tasks, onToggle, projectsById, onQ
         <span className="icon-btn"><Icon name="filter" size={14} /></span>
         <span className="icon-btn"><Icon name="more" size={14} /></span>
         <button className="btn" onClick={onQuickAdd}>
-          <Icon name="plus" size={12} />Quick add<span className="kbd">⌘N</span>
+          <Icon name="plus" size={12} />Quick add<span className="kbd">^N</span>
         </button>
       </div>
 
