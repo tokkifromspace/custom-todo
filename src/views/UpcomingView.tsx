@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Project, Task } from "../types";
 import { Icon } from "../components/Icon";
 import { TaskRow } from "../components/TaskRow";
-import { toIsoDate, todayIso } from "../data/helpers";
+import { fromIsoDate, toIsoDate, todayIso } from "../data/helpers";
 
 interface Props {
   tasks: Task[];
@@ -12,7 +12,7 @@ interface Props {
   onSetDue: (id: string, due: string | null) => void;
   recentlyCompleted: Set<string>;
   projectsById: Record<string, Project>;
-  onQuickAdd: () => void;
+  onQuickAdd: (defaultDate?: string) => void;
 }
 
 interface DayCell {
@@ -23,11 +23,36 @@ interface DayCell {
   tasks: Task[];
 }
 
+function formatSelectedLabel(iso: string, todayKey: string): { title: string; sub: string } {
+  if (iso === todayKey) {
+    const d = new Date();
+    return {
+      title: "Today",
+      sub: d.toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" }),
+    };
+  }
+  const d = fromIsoDate(iso);
+  if (!d) return { title: iso, sub: "" };
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (iso === toIsoDate(tomorrow)) {
+    return {
+      title: "Tomorrow",
+      sub: d.toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" }),
+    };
+  }
+  return {
+    title: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+    sub: d.toLocaleDateString("en-US", { year: "numeric" }),
+  };
+}
+
 export function UpcomingView({ tasks, onToggle, onDelete, onEdit, onSetDue, recentlyCompleted, projectsById, onQuickAdd }: Props) {
   const today = new Date();
   const todayKey = todayIso();
 
   const [anchor, setAnchor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState<string>(todayKey);
 
   const byDay: Record<string, Task[]> = {};
   for (const t of tasks) {
@@ -58,24 +83,35 @@ export function UpcomingView({ tasks, onToggle, onDelete, onEdit, onSetDue, rece
   });
 
   const monthLabel = anchor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const todayLabel = today.toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" });
 
   const goPrev = () => setAnchor((a) => new Date(a.getFullYear(), a.getMonth() - 1, 1));
   const goNext = () => setAnchor((a) => new Date(a.getFullYear(), a.getMonth() + 1, 1));
-  const goToday = () => setAnchor(new Date(today.getFullYear(), today.getMonth(), 1));
+  const goToday = () => {
+    setAnchor(new Date(today.getFullYear(), today.getMonth(), 1));
+    setSelectedDate(todayKey);
+  };
   const isCurrentMonth =
     anchor.getFullYear() === today.getFullYear() && anchor.getMonth() === today.getMonth();
 
-  const todayTasks = tasks.filter(
-    (t) => t.bucket === "today" && (!t.done || recentlyCompleted.has(t.id)),
+  const selectedTasks = tasks.filter(
+    (t) => t.due === selectedDate && (!t.done || recentlyCompleted.has(t.id)),
   );
+  const { title: panelTitle, sub: panelSub } = formatSelectedLabel(selectedDate, todayKey);
+
+  const handleSelectDay = (iso: string, outOfMonth: boolean) => {
+    setSelectedDate(iso);
+    if (outOfMonth) {
+      const d = fromIsoDate(iso);
+      if (d) setAnchor(new Date(d.getFullYear(), d.getMonth(), 1));
+    }
+  };
 
   return (
     <div
       className="main"
       style={{
         display: "grid",
-        gridTemplateRows: todayTasks.length > 0 ? "auto 1fr auto" : "auto 1fr",
+        gridTemplateRows: "auto 1fr 220px",
         overflow: "hidden",
       }}
     >
@@ -95,7 +131,7 @@ export function UpcomingView({ tasks, onToggle, onDelete, onEdit, onSetDue, rece
             style={{ background: "transparent" }}
             title="Jump to today"
             onClick={goToday}
-            disabled={isCurrentMonth}
+            disabled={isCurrentMonth && selectedDate === todayKey}
           >
             Today
           </button>
@@ -103,7 +139,7 @@ export function UpcomingView({ tasks, onToggle, onDelete, onEdit, onSetDue, rece
             <Icon name="chev" size={12} />
           </button>
         </div>
-        <button className="btn" onClick={onQuickAdd}>
+        <button className="btn" onClick={() => onQuickAdd()}>
           <Icon name="plus" size={12} />Quick add<span className="kbd">^N</span>
         </button>
       </div>
@@ -130,7 +166,7 @@ export function UpcomingView({ tasks, onToggle, onDelete, onEdit, onSetDue, rece
           className="glass"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(7, 1fr)",
+            gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
             gridAutoRows: "1fr",
             gap: 1,
             background: "oklch(0.4 0.01 80 / 0.06)",
@@ -140,106 +176,169 @@ export function UpcomingView({ tasks, onToggle, onDelete, onEdit, onSetDue, rece
             overflow: "hidden",
           }}
         >
-          {days.map((d) => (
-            <div
-              key={d.iso}
-              style={{
-                background: d.isToday
-                  ? "oklch(0.78 0.12 60 / 0.14)"
-                  : d.outOfMonth
-                  ? "oklch(1 0 0 / 0.35)"
-                  : "var(--bg-glass)",
-                padding: "6px 8px 8px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 3,
-                minHeight: 0,
-                position: "relative",
-              }}
-            >
+          {days.map((d) => {
+            const isSelected = d.iso === selectedDate;
+            const baseBg = d.isToday
+              ? "oklch(0.78 0.12 60 / 0.14)"
+              : d.outOfMonth
+              ? "oklch(1 0 0 / 0.35)"
+              : "var(--bg-glass)";
+            const dateForLabel = fromIsoDate(d.iso);
+            const ariaLabel = dateForLabel
+              ? `Select ${dateForLabel.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}`
+              : `Select ${d.iso}`;
+            return (
               <div
+                key={d.iso}
+                onClick={() => handleSelectDay(d.iso, d.outOfMonth)}
+                role="button"
+                tabIndex={isSelected ? 0 : -1}
+                aria-pressed={isSelected}
+                aria-label={ariaLabel}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleSelectDay(d.iso, d.outOfMonth);
+                  }
+                }}
                 style={{
-                  fontSize: 11,
-                  fontWeight: d.isToday ? 700 : 500,
-                  color: d.outOfMonth ? "var(--fg-4)" : d.isToday ? "var(--warm)" : "var(--fg-2)",
-                  fontVariantNumeric: "tabular-nums",
-                  marginBottom: 1,
+                  background: baseBg,
+                  padding: "6px 8px 8px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 3,
+                  minWidth: 0,
+                  minHeight: 0,
+                  overflow: "hidden",
+                  position: "relative",
+                  cursor: "default",
+                  outline: "none",
+                  boxShadow: isSelected
+                    ? "inset 0 0 0 1.5px var(--accent)"
+                    : undefined,
+                  transition: "box-shadow 0.1s",
                 }}
               >
-                {d.isToday ? (
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      width: 18,
-                      height: 18,
-                      borderRadius: 999,
-                      background: "var(--warm)",
-                      color: "white",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 10.5,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {d.date}
-                  </span>
-                ) : (
-                  d.date
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: d.isToday ? 700 : 500,
+                    color: d.outOfMonth ? "var(--fg-4)" : d.isToday ? "var(--warm)" : "var(--fg-2)",
+                    fontVariantNumeric: "tabular-nums",
+                    marginBottom: 1,
+                  }}
+                >
+                  {d.isToday ? (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        width: 18,
+                        height: 18,
+                        borderRadius: 999,
+                        background: "var(--warm)",
+                        color: "white",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {d.date}
+                    </span>
+                  ) : (
+                    d.date
+                  )}
+                </div>
+                {d.tasks.slice(0, 3).map((t) => {
+                  const proj = t.projectId ? projectsById[t.projectId] : null;
+                  const color = proj ? proj.color : "oklch(0.6 0.04 80)";
+                  const label = t.title.trim() || "No title";
+                  const isPlaceholder = !t.title.trim();
+                  return (
+                    <div
+                      key={t.id}
+                      title={label}
+                      style={{
+                        fontSize: 10.5,
+                        padding: "2px 6px",
+                        borderRadius: 3,
+                        background: color,
+                        color: "white",
+                        fontWeight: 500,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        letterSpacing: "-0.005em",
+                        fontStyle: isPlaceholder ? "italic" : undefined,
+                        opacity: isPlaceholder ? 0.75 : 1,
+                        minWidth: 0,
+                        maxWidth: "100%",
+                      }}
+                    >
+                      {label}
+                    </div>
+                  );
+                })}
+                {d.tasks.length > 3 && (
+                  <div style={{ fontSize: 10, color: "var(--fg-4)", fontWeight: 500, paddingLeft: 2 }}>
+                    +{d.tasks.length - 3} more
+                  </div>
                 )}
               </div>
-              {d.tasks.slice(0, 3).map((t) => {
-                const proj = t.projectId ? projectsById[t.projectId] : null;
-                const color = proj ? proj.color : "oklch(0.6 0.04 80)";
-                return (
-                  <div
-                    key={t.id}
-                    title={t.title}
-                    style={{
-                      fontSize: 10.5,
-                      padding: "2px 6px",
-                      borderRadius: 3,
-                      background: color,
-                      color: "white",
-                      fontWeight: 500,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      letterSpacing: "-0.005em",
-                    }}
-                  >
-                    {t.title}
-                  </div>
-                );
-              })}
-              {d.tasks.length > 3 && (
-                <div style={{ fontSize: 10, color: "var(--fg-4)", fontWeight: 500, paddingLeft: 2 }}>
-                  +{d.tasks.length - 3} more
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
-      {todayTasks.length > 0 && (
-        <div className="glass-strong" style={{ padding: "10px 22px 16px", maxHeight: 180, overflowY: "auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-            <span style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 600 }}>{todayLabel}</span>
+      <div
+        className="glass-strong"
+        style={{
+          padding: "10px 22px 16px",
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexShrink: 0 }}>
+          <span style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 600 }}>{panelTitle}</span>
+          {panelSub && (
             <span style={{ fontSize: 11, color: "var(--fg-4)" }}>
-              Today · {todayTasks.length} task{todayTasks.length === 1 ? "" : "s"}
+              {panelSub}
             </span>
-            <span style={{ flex: 1 }} />
-            <span className="icon-btn" onClick={onQuickAdd}>
-              <Icon name="plus" size={13} />
-            </span>
-          </div>
-          <div className="tasks">
-            {todayTasks.map((t) => (
-              <TaskRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onSetDue={onSetDue} showProject compact projectsById={projectsById} />
-            ))}
-          </div>
+          )}
+          <span style={{ fontSize: 11, color: "var(--fg-4)" }}>
+            · {selectedTasks.length} task{selectedTasks.length === 1 ? "" : "s"}
+          </span>
+          <span style={{ flex: 1 }} />
+          <span className="icon-btn" onClick={() => onQuickAdd(selectedDate)}>
+            <Icon name="plus" size={13} />
+          </span>
         </div>
-      )}
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+          {selectedTasks.length > 0 ? (
+            <div className="tasks">
+              {selectedTasks.map((t) => (
+                <TaskRow
+                  key={t.id}
+                  task={t}
+                  onToggle={onToggle}
+                  onDelete={onDelete}
+                  onEdit={onEdit}
+                  onSetDue={onSetDue}
+                  showProject
+                  compact
+                  projectsById={projectsById}
+                />
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, color: "var(--fg-4)", padding: "4px 2px" }}>
+              No tasks scheduled.
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

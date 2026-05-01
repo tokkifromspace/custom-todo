@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { IconName, NewTaskPayload, Project, Task, When } from "../types";
 import { fromIsoDate, parseRepeat, serializeRepeat, toIsoDate, todayIso } from "../data/helpers";
 import type { RepeatInterval } from "../data/helpers";
@@ -13,6 +13,7 @@ interface Props {
   onSubmit: (payload: NewTaskPayload) => void;
   projects: Project[];
   defaultProjectId?: string | null;
+  defaultDate?: string | null;
   editingTask?: Task | null;
 }
 
@@ -23,7 +24,7 @@ interface BucketDef {
   icon: IconName;
 }
 
-export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProjectId, editingTask }: Props) {
+export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProjectId, defaultDate, editingTask }: Props) {
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [when, setWhen] = useState<When>("today");
@@ -41,7 +42,7 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
 
   const titleRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     if (editingTask) {
       setTitle(editingTask.title);
@@ -99,8 +100,25 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
     } else {
       setTitle("");
       setNotes("");
-      setWhen("today");
-      setDeadline(null);
+      if (defaultDate) {
+        const tomorrowDate = new Date();
+        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+        const tomorrowKey = toIsoDate(tomorrowDate);
+        const todayKey = todayIso();
+        if (defaultDate === todayKey) {
+          setWhen("today");
+          setDeadline(null);
+        } else if (defaultDate === tomorrowKey) {
+          setWhen("tomorrow");
+          setDeadline(null);
+        } else {
+          setWhen("scheduled");
+          setDeadline(defaultDate);
+        }
+      } else {
+        setWhen("today");
+        setDeadline(null);
+      }
       setHardDeadline(null);
       setShowRepeat(false);
       setRepeatInterval("weekly");
@@ -113,7 +131,7 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
     setTagDraft("");
     setTagOpen(false);
     setTimeout(() => titleRef.current?.focus(), 30);
-  }, [open, defaultProjectId, editingTask]);
+  }, [open, defaultProjectId, defaultDate, editingTask]);
 
   const submit = () => {
     let due: string | undefined;
