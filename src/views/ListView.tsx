@@ -12,7 +12,7 @@ interface Props {
   onDelete: (task: Task) => void;
   onEdit: (task: Task) => void;
   onSetDue: (id: string, due: string | null) => void;
-  onReorder: (orderedIds: string[]) => void;
+  onReorder?: (orderedIds: string[]) => void;
   projectsById: Record<string, Project>;
   onQuickAdd: () => void;
 }

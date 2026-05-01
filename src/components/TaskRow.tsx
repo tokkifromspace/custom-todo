@@ -19,10 +19,15 @@ export function TaskRow({ task, onToggle, onDelete, onEdit, onSetDue, showProjec
   const dueLabel =
     task.bucket === "today" ? "Today" :
     task.bucket === "evening" ? "This evening" :
-    formatDue(task.due);
+    task.due ? formatDue(task.due) :
+    task.when === "anytime" ? "Anytime" :
+    task.when === "someday" ? "Someday" :
+    null;
   const dueIcon: IconName =
     task.bucket === "today" ? "sun" :
     task.bucket === "evening" ? "moon" :
+    task.when === "anytime" ? "list" :
+    task.when === "someday" ? "drop" :
     "calendar";
   const deadlineLabel = formatDue(task.deadline);
   const deadlineOverdue = isOverdue(task.deadline) && !task.done;

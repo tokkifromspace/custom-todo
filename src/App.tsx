@@ -166,7 +166,21 @@ function App() {
       />
     );
   } else if (view.type === "inbox") {
-    const list = tasks.filter((t) => t.when === "inbox" && (!t.done || recentlyCompleted.has(t.id)));
+    const list = tasks
+      .filter(
+        (t) =>
+          !t.projectId &&
+          t.bucket !== "today" &&
+          t.bucket !== "evening" &&
+          (!t.done || recentlyCompleted.has(t.id)),
+      )
+      .sort((a, b) => {
+        // Tasks with a due date first (ascending), then no-due tasks at the bottom.
+        if (a.due && b.due) return a.due.localeCompare(b.due);
+        if (a.due) return -1;
+        if (b.due) return 1;
+        return 0;
+      });
     pane = (
       <ListView
         title="Inbox"
@@ -178,7 +192,6 @@ function App() {
         onDelete={deleteTask}
         onEdit={setEditingTask}
         onSetDue={handleSetDue}
-        onReorder={reorderTasks}
         projectsById={projectsById}
         onQuickAdd={() => setQuickAdd(true)}
       />
