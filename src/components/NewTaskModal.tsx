@@ -3,6 +3,8 @@ import type { IconName, NewTaskPayload, Project, Task, When } from "../types";
 import { formatDue, fromIsoDate, parseRepeat, serializeRepeat, toIsoDate, todayIso } from "../data/helpers";
 import type { RepeatInterval } from "../data/helpers";
 import { Icon } from "./Icon";
+import { Select } from "./Select";
+import type { SelectItem } from "./Select";
 
 interface Props {
   open: boolean;
@@ -35,10 +37,8 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [tagOpen, setTagOpen] = useState(false);
-  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
 
   const titleRef = useRef<HTMLInputElement>(null);
-  const projectMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -81,7 +81,6 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
     }
     setTagDraft("");
     setTagOpen(false);
-    setProjectMenuOpen(false);
     setTimeout(() => titleRef.current?.focus(), 30);
   }, [open, defaultProjectId, editingTask]);
 
@@ -125,23 +124,15 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
+      // Inner widgets (Select popover, etc.) preventDefault on the keys they
+      // own; respect that so e.g. Esc doesn't close the modal too.
+      if (e.defaultPrevented) return;
       if (e.key === "Escape") onClose();
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") submit();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   });
-
-  useEffect(() => {
-    if (!projectMenuOpen) return;
-    const onDoc = (e: MouseEvent) => {
-      if (projectMenuRef.current && !projectMenuRef.current.contains(e.target as Node)) {
-        setProjectMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [projectMenuOpen]);
 
   if (!open) return null;
 
@@ -156,8 +147,6 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
     setTagDraft("");
   };
   const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
-
-  const project = projectId ? projects.find((p) => p.id === projectId) : null;
 
   const buckets: BucketDef[] = [
     { v: "today", l: "Today", c: "var(--warm)", icon: "sun" },
@@ -336,17 +325,18 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <Icon name="repeat" size={12} style={{ color: "var(--fg-3)" }} />
-                  <select
+                  <Select
                     value={repeatInterval}
-                    onChange={(e) => setRepeatInterval(e.target.value as RepeatInterval)}
-                    className="auth-input"
-                    style={{ height: 32, fontSize: 12.5, padding: "0 8px" }}
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="biweekly">Bi-weekly</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
+                    onChange={(v) => setRepeatInterval(v as RepeatInterval)}
+                    size="sm"
+                    ariaLabel="Repeat frequency"
+                    options={[
+                      { value: "daily", label: "Daily" },
+                      { value: "weekly", label: "Weekly" },
+                      { value: "biweekly", label: "Bi-weekly" },
+                      { value: "monthly", label: "Monthly" },
+                    ]}
+                  />
                   {(repeatInterval === "weekly" || repeatInterval === "biweekly") && (
                     <div style={{ display: "flex", gap: 2 }}>
                       {["S", "M", "T", "W", "T", "F", "S"].map((label, i) => (
@@ -407,100 +397,42 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
         </div>
 
         <div style={{ padding: "12px 18px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          <div ref={projectMenuRef} style={{ position: "relative" }}>
-            <div
-              onClick={() => setProjectMenuOpen((o) => !o)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "6px 10px",
-                borderRadius: 8,
-                background: "var(--bg-hover)",
-                cursor: "default",
-                minHeight: 30,
-                boxSizing: "border-box",
-              }}
-            >
-              {project ? (
-                <span style={{ width: 10, height: 10, borderRadius: 3, background: project.color, flexShrink: 0 }} />
-              ) : (
-                <Icon name="folder" size={13} style={{ color: "var(--fg-3)" }} />
-              )}
-              <span
-                style={{
-                  fontSize: 12.5,
-                  color: project ? "var(--fg)" : "var(--fg-3)",
-                  fontWeight: 500,
-                }}
-              >
-                {project ? project.name : "No project"}
+          <Select
+            value={projectId ?? ""}
+            onChange={(v) => setProjectId(v === "" ? null : v)}
+            full
+            ariaLabel="Project"
+            placeholder="No project"
+            renderValue={(o) => (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                {o.icon}
+                <span>{o.label}</span>
               </span>
-            </div>
-            {projectMenuOpen && (
-              <div
-                className="glass-strong"
-                style={{
-                  position: "absolute",
-                  top: "calc(100% + 4px)",
-                  left: 0,
-                  width: 240,
-                  padding: 4,
-                  borderRadius: 8,
-                  zIndex: 5,
-                  boxShadow: "var(--shadow-md)",
-                  maxHeight: 240,
-                  overflowY: "auto",
-                }}
-              >
-                <div
-                  onClick={() => {
-                    setProjectId(null);
-                    setProjectMenuOpen(false);
-                  }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "6px 8px",
-                    borderRadius: 5,
-                    fontSize: 12,
-                    color: "var(--fg-2)",
-                    cursor: "default",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                >
-                  <Icon name="inbox" size={11} style={{ color: "var(--fg-4)" }} />
-                  No project (Inbox)
-                </div>
-                {projects.map((p) => (
-                  <div
-                    key={p.id}
-                    onClick={() => {
-                      setProjectId(p.id);
-                      setProjectMenuOpen(false);
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "6px 8px",
-                      borderRadius: 5,
-                      fontSize: 12,
-                      color: "var(--fg-2)",
-                      cursor: "default",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                  >
-                    <span style={{ width: 10, height: 10, borderRadius: 3, background: p.color, flexShrink: 0 }} />
-                    {p.name}
-                  </div>
-                ))}
-              </div>
             )}
-          </div>
+            options={[
+              {
+                value: "",
+                label: "No project (Inbox)",
+                icon: <Icon name="inbox" size={11} style={{ color: "var(--fg-4)" }} />,
+              },
+              ...(projects.length > 0 ? [{ divider: true } as SelectItem] : []),
+              ...projects.map<SelectItem>((p) => ({
+                value: p.id,
+                label: p.name,
+                icon: (
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 3,
+                      background: p.color,
+                      display: "inline-block",
+                    }}
+                  />
+                ),
+              })),
+            ]}
+          />
           <div
             style={{
               position: "relative",
