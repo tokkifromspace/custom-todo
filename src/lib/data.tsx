@@ -1,0 +1,248 @@
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { supabase } from "./supabase";
+import { useAuth } from "./auth";
+import { seedNewUser } from "./seedNewUser";
+import type {
+  Bucket,
+  Group,
+  NewTaskPayload,
+  Project,
+  Task,
+  When,
+} from "../types";
+
+interface TaskRow {
+  id: string;
+  title: string;
+  notes: string | null;
+  bucket: string | null;
+  when_at: string;
+  due: string | null;
+  due_today: boolean;
+  due_overdue: boolean;
+  repeat: string | null;
+  project_id: string | null;
+  tags: string[];
+  done: boolean;
+}
+
+interface ProjectRow {
+  id: string;
+  group_id: string | null;
+  name: string;
+  color: string;
+}
+
+interface GroupRow {
+  id: string;
+  name: string;
+  color: string;
+}
+
+function toTask(row: TaskRow): Task {
+  return {
+    id: row.id,
+    title: row.title,
+    notes: row.notes ?? undefined,
+    bucket: (row.bucket as Bucket | null) ?? undefined,
+    when: row.when_at as When,
+    due: row.due ?? undefined,
+    dueToday: row.due_today,
+    dueOverdue: row.due_overdue,
+    repeat: row.repeat ?? undefined,
+    projectId: row.project_id ?? undefined,
+    tags: row.tags.length > 0 ? row.tags : undefined,
+    done: row.done,
+  };
+}
+
+function toProject(row: ProjectRow): Project {
+  return {
+    id: row.id,
+    groupId: row.group_id ?? "",
+    name: row.name,
+    color: row.color,
+  };
+}
+
+function toGroup(row: GroupRow): Group {
+  return { id: row.id, name: row.name, color: row.color };
+}
+
+interface DataContextValue {
+  groups: Group[];
+  projects: Project[];
+  tasks: Task[];
+  loading: boolean;
+  error: string | null;
+  toggleTask: (id: string) => Promise<void>;
+  addTask: (payload: NewTaskPayload) => Promise<void>;
+  addProject: (groupId: string, name: string) => Promise<Project | null>;
+}
+
+const DataContext = createContext<DataContextValue | null>(null);
+
+export function DataProvider({ children }: { children: ReactNode }) {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? null;
+
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [g, p, t] = await Promise.all([
+        supabase.from("groups").select("id, name, color").order("sort_order").order("created_at"),
+        supabase.from("projects").select("id, group_id, name, color").order("sort_order").order("created_at"),
+        supabase
+          .from("tasks")
+          .select("id, title, notes, bucket, when_at, due, due_today, due_overdue, repeat, project_id, tags, done")
+          .order("sort_order")
+          .order("created_at"),
+      ]);
+      if (g.error) throw g.error;
+      if (p.error) throw p.error;
+      if (t.error) throw t.error;
+
+      let groupsRows = (g.data ?? []) as GroupRow[];
+      let projectsRows = (p.data ?? []) as ProjectRow[];
+      let tasksRows = (t.data ?? []) as TaskRow[];
+
+      if (groupsRows.length === 0) {
+        await seedNewUser();
+        const [g2, p2, t2] = await Promise.all([
+          supabase.from("groups").select("id, name, color").order("sort_order").order("created_at"),
+          supabase.from("projects").select("id, group_id, name, color").order("sort_order").order("created_at"),
+          supabase
+            .from("tasks")
+            .select("id, title, notes, bucket, when_at, due, due_today, due_overdue, repeat, project_id, tags, done")
+            .order("sort_order")
+            .order("created_at"),
+        ]);
+        if (g2.error) throw g2.error;
+        if (p2.error) throw p2.error;
+        if (t2.error) throw t2.error;
+        groupsRows = (g2.data ?? []) as GroupRow[];
+        projectsRows = (p2.data ?? []) as ProjectRow[];
+        tasksRows = (t2.data ?? []) as TaskRow[];
+      }
+
+      setGroups(groupsRows.map(toGroup));
+      setProjects(projectsRows.map(toProject));
+      setTasks(tasksRows.map(toTask));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!userId) {
+      setGroups([]);
+      setProjects([]);
+      setTasks([]);
+      setLoading(false);
+      return;
+    }
+    loadAll();
+  }, [userId, loadAll]);
+
+  const toggleTask = useCallback(async (id: string) => {
+    let prevDone: boolean | null = null;
+    setTasks((ts) =>
+      ts.map((t) => {
+        if (t.id !== id) return t;
+        prevDone = t.done;
+        return { ...t, done: !t.done };
+      }),
+    );
+    if (prevDone === null) return;
+    const { error } = await supabase
+      .from("tasks")
+      .update({ done: !prevDone })
+      .eq("id", id);
+    if (error) {
+      // revert
+      const reverted = prevDone;
+      setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, done: reverted } : t)));
+      setError(error.message);
+    }
+  }, []);
+
+  const addTask = useCallback(async (payload: NewTaskPayload) => {
+    const tempId = `temp-${crypto.randomUUID()}`;
+    const optimistic: Task = { id: tempId, done: false, ...payload };
+    setTasks((ts) => [optimistic, ...ts]);
+    const { data, error } = await supabase
+      .from("tasks")
+      .insert({
+        title: payload.title,
+        notes: payload.notes ?? null,
+        bucket: payload.bucket ?? null,
+        when_at: payload.when,
+        due: payload.due ?? null,
+        due_today: payload.dueToday ?? false,
+        project_id: payload.projectId ?? null,
+        tags: payload.tags ?? [],
+      })
+      .select("id, title, notes, bucket, when_at, due, due_today, due_overdue, repeat, project_id, tags, done")
+      .single();
+    if (error || !data) {
+      setTasks((ts) => ts.filter((t) => t.id !== tempId));
+      setError(error?.message ?? "Failed to add task");
+      return;
+    }
+    const real = toTask(data as TaskRow);
+    setTasks((ts) => ts.map((t) => (t.id === tempId ? real : t)));
+  }, []);
+
+  const addProject = useCallback(
+    async (groupId: string, name: string): Promise<Project | null> => {
+      const group = groups.find((g) => g.id === groupId);
+      const color = group?.color ?? "var(--accent)";
+      const tempId = `temp-${crypto.randomUUID()}`;
+      const optimistic: Project = { id: tempId, groupId, name, color };
+      setProjects((ps) => [...ps, optimistic]);
+      const { data, error } = await supabase
+        .from("projects")
+        .insert({ group_id: groupId, name, color })
+        .select("id, group_id, name, color")
+        .single();
+      if (error || !data) {
+        setProjects((ps) => ps.filter((p) => p.id !== tempId));
+        setError(error?.message ?? "Failed to add project");
+        return null;
+      }
+      const real = toProject(data as ProjectRow);
+      setProjects((ps) => ps.map((p) => (p.id === tempId ? real : p)));
+      return real;
+    },
+    [groups],
+  );
+
+  const value: DataContextValue = {
+    groups,
+    projects,
+    tasks,
+    loading,
+    error,
+    toggleTask,
+    addTask,
+    addProject,
+  };
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
+}
+
+export function useData(): DataContextValue {
+  const ctx = useContext(DataContext);
+  if (!ctx) throw new Error("useData must be used within DataProvider");
+  return ctx;
+}

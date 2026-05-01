@@ -22,7 +22,7 @@ export interface Project {
 }
 
 export interface Task {
-  id: number;
+  id: string;
   title: string;
   notes?: string;
   bucket?: Bucket | null;

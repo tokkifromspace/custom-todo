@@ -7,7 +7,7 @@ interface Props {
   project: Project;
   group: Group | undefined;
   tasks: Task[];
-  onToggle: (id: number) => void;
+  onToggle: (id: string) => void;
   projectsById: Record<string, Project>;
   onQuickAdd: () => void;
 }

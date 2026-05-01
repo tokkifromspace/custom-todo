@@ -4,7 +4,7 @@ import { Icon } from "./Icon";
 
 interface Props {
   task: Task;
-  onToggle?: (id: number) => void;
+  onToggle?: (id: string) => void;
   showProject?: boolean;
   compact?: boolean;
   projectsById: Record<string, Project>;

@@ -20,10 +20,11 @@ interface Props {
   groups: Group[];
   projects: Project[];
   counts: Counts;
-  onAddProject: (groupId: string, name: string) => void;
+  onAddProject: (groupId: string, name: string) => void | Promise<void>;
+  onSignOut?: () => void;
 }
 
-export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProject }: Props) {
+export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProject, onSignOut }: Props) {
   const [openInput, setOpenInput] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -170,7 +171,17 @@ export function Sidebar({ view, onNavigate, groups, projects, counts, onAddProje
 
       <div className="side-footer">
         <Icon name="settings" size={13} />
-        <span>Logbook · Trash</span>
+        <span style={{ flex: 1 }}>Logbook · Trash</span>
+        {onSignOut && (
+          <span
+            onClick={onSignOut}
+            style={{ cursor: "default", fontSize: 11.5, color: "var(--fg-4)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--fg-2)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--fg-4)")}
+          >
+            Sign out
+          </span>
+        )}
       </div>
     </div>
   );
