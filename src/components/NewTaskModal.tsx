@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { IconName, NewTaskPayload, Project, Task, When } from "../types";
-import { formatDue, fromIsoDate, parseRepeat, serializeRepeat, toIsoDate, todayIso } from "../data/helpers";
+import { fromIsoDate, parseRepeat, serializeRepeat, toIsoDate, todayIso } from "../data/helpers";
 import type { RepeatInterval } from "../data/helpers";
 import { Icon } from "./Icon";
 import { Select } from "./Select";
 import type { SelectItem } from "./Select";
+import { DatePicker } from "./DatePicker";
 
 interface Props {
   open: boolean;
@@ -26,7 +27,6 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [when, setWhen] = useState<When>("today");
-  const [showDeadline, setShowDeadline] = useState(false);
   const [deadline, setDeadline] = useState<string | null>(null);
   const [showRepeat, setShowRepeat] = useState(false);
   const [repeatInterval, setRepeatInterval] = useState<RepeatInterval>("weekly");
@@ -47,7 +47,6 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
       setNotes(editingTask.notes ?? "");
       setWhen(editingTask.when);
       setDeadline(editingTask.due ?? null);
-      setShowDeadline(!!editingTask.due);
       const spec = parseRepeat(editingTask.repeat);
       setShowRepeat(!!spec);
       setRepeatInterval(spec?.interval ?? "weekly");
@@ -69,7 +68,6 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
       setTitle("");
       setNotes("");
       setWhen("today");
-      setShowDeadline(false);
       setDeadline(null);
       setShowRepeat(false);
       setRepeatInterval("weekly");
@@ -251,54 +249,12 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
             })}
           </div>
 
-          {!showDeadline ? (
-            <button
-              type="button"
-              onClick={() => setShowDeadline(true)}
-              style={{
-                all: "unset",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 10px",
-                borderRadius: 8,
-                fontSize: 12,
-                color: "var(--fg-3)",
-                cursor: "default",
-                background: "var(--bg-hover)",
-              }}
-            >
-              <Icon name="calendar" size={12} />
-              <span>Add deadline</span>
-            </button>
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <input
-                type="date"
-                value={deadline ?? ""}
-                min={todayIso()}
-                onChange={(e) => setDeadline(e.target.value || null)}
-                className="auth-input"
-                style={{ height: 32, fontSize: 12.5, padding: "0 10px", maxWidth: 180 }}
-              />
-              {deadline && (
-                <span style={{ fontSize: 12, color: "var(--fg-3)" }}>{formatDue(deadline)}</span>
-              )}
-              <span style={{ flex: 1 }} />
-              <button
-                type="button"
-                className="icon-btn"
-                style={{ width: 26, height: 26 }}
-                onClick={() => {
-                  setShowDeadline(false);
-                  setDeadline(null);
-                }}
-                title="Remove deadline"
-              >
-                <Icon name="x" size={12} />
-              </button>
-            </div>
-          )}
+          <DatePicker
+            value={deadline ? fromIsoDate(deadline) : null}
+            onChange={(d) => setDeadline(d ? toIsoDate(d) : null)}
+            placeholder="Set deadline"
+            ariaLabel="Deadline"
+          />
 
           <div style={{ marginTop: 10 }}>
             {!showRepeat ? (
