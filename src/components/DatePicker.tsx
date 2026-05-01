@@ -76,7 +76,9 @@ type Props = {
   maxDate?: Date | null;
   ariaLabel?: string;
   showClearInTrigger?: boolean;
+  leadingIcon?: ReactNode;
   renderTrigger?: (api: DatePickerTriggerApi) => ReactNode;
+  headerSlot?: (api: { close: () => void }) => ReactNode;
 };
 
 export function DatePicker({
@@ -88,7 +90,9 @@ export function DatePicker({
   minDate = null, maxDate = null,
   ariaLabel,
   showClearInTrigger = true,
+  leadingIcon,
   renderTrigger,
+  headerSlot,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -247,7 +251,7 @@ export function DatePicker({
           onKeyDown={onTriggerKey}
         >
           <span className="leading" aria-hidden>
-            <CalendarGlyph />
+            {leadingIcon ?? <CalendarGlyph />}
           </span>
           <span className={`label${value ? "" : " placeholder"}`}>
             {value ? triggerLabel : placeholder}
@@ -277,6 +281,9 @@ export function DatePicker({
           style={popStyle}
           onKeyDown={onCalKey}
         >
+          {headerSlot && (
+            <div className="cal-slot">{headerSlot({ close: () => closeCal() })}</div>
+          )}
           {/* header */}
           <div className="cal-head">
             <button type="button" className="cal-nav-btn" aria-label="Previous month"

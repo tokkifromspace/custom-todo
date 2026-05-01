@@ -28,6 +28,7 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
   const [notes, setNotes] = useState("");
   const [when, setWhen] = useState<When>("today");
   const [deadline, setDeadline] = useState<string | null>(null);
+  const [hardDeadline, setHardDeadline] = useState<string | null>(null);
   const [showRepeat, setShowRepeat] = useState(false);
   const [repeatInterval, setRepeatInterval] = useState<RepeatInterval>("weekly");
   const [repeatDow, setRepeatDow] = useState<number>(1); // Mon
@@ -45,8 +46,38 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
     if (editingTask) {
       setTitle(editingTask.title);
       setNotes(editingTask.notes ?? "");
-      setWhen(editingTask.when);
-      setDeadline(editingTask.due ?? null);
+      // Determine which bucket button vs the Date picker should be active.
+      const tomorrowDate = new Date();
+      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+      const tomorrowKey = toIsoDate(tomorrowDate);
+      const todayKey = todayIso();
+      if (editingTask.bucket === "today") {
+        setWhen("today");
+        setDeadline(null);
+      } else if (editingTask.bucket === "evening") {
+        setWhen("evening");
+        setDeadline(null);
+      } else if (editingTask.due === tomorrowKey) {
+        setWhen("tomorrow");
+        setDeadline(null);
+      } else if (
+        editingTask.due &&
+        editingTask.due !== todayKey &&
+        editingTask.due !== tomorrowKey
+      ) {
+        // Specific date that isn't today/tomorrow — light up the Date cell
+        setWhen("scheduled");
+        setDeadline(editingTask.due);
+      } else if (editingTask.when === "anytime") {
+        setWhen("anytime");
+        setDeadline(null);
+      } else if (editingTask.when === "someday") {
+        setWhen("someday");
+        setDeadline(null);
+      } else {
+        setWhen(editingTask.when);
+        setDeadline(null);
+      }
       const spec = parseRepeat(editingTask.repeat);
       setShowRepeat(!!spec);
       setRepeatInterval(spec?.interval ?? "weekly");
@@ -62,6 +93,7 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
       } else {
         setRepeatDom(baseDate?.getDate() ?? new Date().getDate());
       }
+      setHardDeadline(editingTask.deadline ?? null);
       setProjectId(editingTask.projectId ?? null);
       setTags(editingTask.tags ?? []);
     } else {
@@ -69,6 +101,7 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
       setNotes("");
       setWhen("today");
       setDeadline(null);
+      setHardDeadline(null);
       setShowRepeat(false);
       setRepeatInterval("weekly");
       setRepeatFromCompletion(false);
@@ -84,8 +117,14 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
 
   const submit = () => {
     let due: string | undefined;
+    let resolvedWhen = when;
+    let resolvedBucket: "today" | "evening" | null =
+      when === "today" ? "today" : when === "evening" ? "evening" : null;
     if (deadline) {
+      // Specific-date pick overrides any bucket choice — treat as scheduled future.
       due = deadline;
+      resolvedWhen = "scheduled";
+      resolvedBucket = null;
     } else if (when === "today" || when === "evening") {
       due = todayIso();
     } else if (when === "tomorrow") {
@@ -109,9 +148,10 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
     onSubmit({
       title: title.trim(),
       notes: notes.trim() || undefined,
-      when,
-      bucket: when === "today" ? "today" : when === "evening" ? "evening" : null,
+      when: resolvedWhen,
+      bucket: resolvedBucket,
       due,
+      deadline: hardDeadline ?? undefined,
       repeat,
       projectId: projectId ?? undefined,
       tags: tags.length ? tags : undefined,
@@ -150,8 +190,6 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
     { v: "today", l: "Today", c: "var(--warm)", icon: "sun" },
     { v: "evening", l: "Evening", c: "var(--evening)", icon: "moon" },
     { v: "tomorrow", l: "Tomorrow", c: "var(--accent)", icon: "calendar" },
-    { v: "anytime", l: "Anytime", c: "var(--fg-3)", icon: "list" },
-    { v: "someday", l: "Someday", c: "var(--someday)", icon: "drop" },
   ];
 
   return (
@@ -220,13 +258,16 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
           >
             When
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6, marginBottom: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 12 }}>
             {buckets.map((b) => {
-              const on = when === b.v;
+              const on = !deadline && when === b.v;
               return (
                 <div
                   key={b.v}
-                  onClick={() => setWhen(b.v)}
+                  onClick={() => {
+                    setWhen(b.v);
+                    setDeadline(null);
+                  }}
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -247,28 +288,165 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
                 </div>
               );
             })}
+            {(() => {
+              const dateActive = !!deadline || when === "anytime" || when === "someday";
+              const dateLabel = deadline
+                ? null /* DatePicker's label prop will fill in formatted date */
+                : when === "anytime"
+                ? "Anytime"
+                : when === "someday"
+                ? "Someday"
+                : "Date";
+              const dateIcon: IconName = deadline
+                ? "calendar"
+                : when === "anytime"
+                ? "list"
+                : when === "someday"
+                ? "drop"
+                : "calendar";
+              const dateColor = deadline
+                ? "var(--accent)"
+                : when === "anytime"
+                ? "var(--fg-3)"
+                : when === "someday"
+                ? "var(--someday)"
+                : "var(--fg-3)";
+              return (
+                <DatePicker
+                  full
+                  value={deadline ? fromIsoDate(deadline) : null}
+                  onChange={(d) => {
+                    setDeadline(d ? toIsoDate(d) : null);
+                    if (d) setWhen("scheduled");
+                  }}
+                  ariaLabel="Pick a specific date or choose Anytime / Someday"
+                  headerSlot={({ close }) => (
+                    <>
+                      <button
+                        type="button"
+                        className="cal-quick-btn"
+                        data-active={!deadline && when === "anytime"}
+                        onClick={() => {
+                          setWhen("anytime");
+                          setDeadline(null);
+                          close();
+                        }}
+                      >
+                        <Icon name="list" size={12} />
+                        Anytime
+                      </button>
+                      <button
+                        type="button"
+                        className="cal-quick-btn"
+                        data-active={!deadline && when === "someday"}
+                        onClick={() => {
+                          setWhen("someday");
+                          setDeadline(null);
+                          close();
+                        }}
+                      >
+                        <Icon name="drop" size={12} />
+                        Someday
+                      </button>
+                    </>
+                  )}
+                  renderTrigger={({ ref, onClick, onKeyDown, label }) => (
+                    <div
+                      ref={ref as React.Ref<HTMLDivElement>}
+                      role="button"
+                      tabIndex={0}
+                      onClick={onClick}
+                      onKeyDown={onKeyDown as unknown as React.KeyboardEventHandler<HTMLDivElement>}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 5,
+                        padding: "10px 4px",
+                        borderRadius: 10,
+                        cursor: "default",
+                        background: dateActive ? "oklch(0.78 0.12 60 / 0.16)" : "oklch(0.4 0.01 80 / 0.04)",
+                        outline: "none",
+                        width: "100%",
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      <span style={{ color: dateColor }}>
+                        <Icon name={dateIcon} size={15} />
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11.5,
+                          fontWeight: dateActive ? 600 : 500,
+                          color: dateActive ? "var(--fg)" : "var(--fg-2)",
+                          maxWidth: "100%",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {dateLabel ?? label ?? "Date"}
+                      </span>
+                    </div>
+                  )}
+                />
+              );
+            })()}
           </div>
 
-          <DatePicker
-            value={deadline ? fromIsoDate(deadline) : null}
-            onChange={(d) => setDeadline(d ? toIsoDate(d) : null)}
-            placeholder="Set deadline"
-            ariaLabel="Deadline"
-          />
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: "var(--fg-4)",
+              marginTop: 14,
+              marginBottom: 8,
+            }}
+          >
+            Deadline
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <DatePicker
+              full
+              value={hardDeadline ? fromIsoDate(hardDeadline) : null}
+              onChange={(d) => setHardDeadline(d ? toIsoDate(d) : null)}
+              placeholder="Add deadline"
+              ariaLabel="Deadline"
+              leadingIcon={<Icon name="flag" size={13} />}
+            />
+          </div>
 
-          <div style={{ marginTop: 10 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: "var(--fg-4)",
+              marginTop: 14,
+              marginBottom: 8,
+            }}
+          >
+            Repeat
+          </div>
+          <div>
             {!showRepeat ? (
               <button
                 type="button"
                 onClick={() => setShowRepeat(true)}
                 style={{
                   all: "unset",
-                  display: "inline-flex",
+                  display: "flex",
                   alignItems: "center",
                   gap: 6,
-                  padding: "6px 10px",
+                  padding: "0 10px",
+                  height: 32,
+                  width: "100%",
+                  boxSizing: "border-box",
                   borderRadius: 8,
-                  fontSize: 12,
+                  fontSize: 12.5,
                   color: "var(--fg-3)",
                   cursor: "default",
                   background: "var(--bg-hover)",
@@ -510,12 +688,24 @@ export function NewTaskModal({ open, onClose, onSubmit, projects, defaultProject
 
         <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: 8 }}>
           <span className="icon-btn"><Icon name="attachment" size={14} /></span>
-          <span className="icon-btn"><Icon name="flag" size={14} /></span>
+          <span className="icon-btn"><Icon name="tag" size={14} /></span>
           <span style={{ flex: 1 }} />
           <button className="btn" onClick={onClose}>Cancel</button>
           <button className="btn primary" onClick={submit}>
             {editingTask ? "Save" : "Add task"}
-            <span className="kbd" style={{ background: "oklch(1 0 0 / 0.2)", color: "white" }}>⌘↵</span>
+            <span
+              className="kbd"
+              style={{
+                background: "oklch(1 0 0 / 0.22)",
+                color: "white",
+                fontFamily: "system-ui, -apple-system, sans-serif",
+                fontSize: 11,
+                letterSpacing: "0.5px",
+                gap: 1,
+              }}
+            >
+              ⌘↵
+            </span>
           </button>
         </div>
       </div>

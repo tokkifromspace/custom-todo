@@ -24,12 +24,14 @@ export function TaskRow({ task, onToggle, onDelete, onEdit, onSetDue, showProjec
     task.bucket === "today" ? "sun" :
     task.bucket === "evening" ? "moon" :
     "calendar";
+  const deadlineLabel = formatDue(task.deadline);
+  const deadlineOverdue = isOverdue(task.deadline) && !task.done;
   const repeatLabel = formatRepeat(task.repeat);
   const overdue = isOverdue(task.due) && !task.done;
   const project = task.projectId ? projectsById[task.projectId] : null;
 
   const hasMeta =
-    !!dueLabel || (task.tags && task.tags.length > 0) || !!project || !!repeatLabel;
+    !!dueLabel || !!deadlineLabel || (task.tags && task.tags.length > 0) || !!project || !!repeatLabel;
 
   return (
     <div className={`task-row ${task.done ? "done" : ""}`}>
@@ -54,6 +56,12 @@ export function TaskRow({ task, onToggle, onDelete, onEdit, onSetDue, showProjec
               <span className={`chip due ${overdue ? "overdue" : ""}`}>
                 <Icon name={dueIcon} size={11} />
                 {dueLabel}
+              </span>
+            )}
+            {deadlineLabel && (
+              <span className={`chip due ${deadlineOverdue ? "overdue" : ""}`} title="Deadline">
+                <Icon name="flag" size={11} />
+                {deadlineLabel}
               </span>
             )}
             {repeatLabel && (

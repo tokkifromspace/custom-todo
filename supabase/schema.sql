@@ -37,8 +37,9 @@ create table if not exists public.tasks (
   title text not null,
   notes text,
   bucket text check (bucket in ('today', 'evening')),
-  when_at text not null check (when_at in ('today', 'evening', 'tomorrow', 'anytime', 'someday', 'inbox')),
+  when_at text not null check (when_at in ('today', 'evening', 'tomorrow', 'scheduled', 'anytime', 'someday', 'inbox')),
   due date,
+  deadline date,
   repeat text,
   tags text[] not null default '{}',
   done boolean not null default false,
@@ -50,6 +51,14 @@ create table if not exists public.tasks (
 create index if not exists tasks_user_id_idx on public.tasks(user_id);
 create index if not exists tasks_project_id_idx on public.tasks(project_id);
 create index if not exists tasks_when_at_idx on public.tasks(user_id, when_at);
+
+-- 1a) Schema evolution for existing DBs (idempotent) ------------------------
+
+alter table public.tasks add column if not exists deadline date;
+
+alter table public.tasks drop constraint if exists tasks_when_at_check;
+alter table public.tasks add constraint tasks_when_at_check
+  check (when_at in ('today', 'evening', 'tomorrow', 'scheduled', 'anytime', 'someday', 'inbox'));
 
 -- 2) updated_at trigger ------------------------------------------------------
 
