@@ -1,7 +1,6 @@
 # custom-todo (Keepgoing)
 
-개인용 To-do 앱 — macOS / iOS 웹 (PWA). Things 스타일의 liquid glass 디자인.
-Claude Design 핸드오프를 기반으로 구현했습니다.
+개인용 To-do 앱 — macOS / iOS 웹 (PWA). liquid glass 디자인, Things 스타일의 심플한 UXUI. Claude Design 핸드오프를 기반으로 구현.
 
 ## 스택
 
@@ -108,5 +107,5 @@ supabase/
 원본 디자인은 Claude Design (claude.ai/design)에서 작업.
 초기 프로토타입은 [최초 커밋](https://github.com/tokkifromspace/custom-todo/commit/75e6c4d) 에 보관됨.
 
-핸드오프 폴더 (예: Logbook의 경우 `~/Downloads/design_handoff_logbook`)는 구현 완료 후 삭제 가능.
+핸드오프 폴더는 구현 완료 후 삭제 가능.
 디자인 의도가 모두 코드에 흡수되어 있고, README는 git에 추적되지 않습니다.
